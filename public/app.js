@@ -1033,6 +1033,8 @@
     $('#cairForm').addEventListener('submit', onCairSubmit);
     $$('.month').forEach(function (m) {
       m.addEventListener('change', function (e) { if (e.target.value) { state.month = e.target.value; refresh(); } });
+      // Di PC, klik pada kotak langsung membuka pemilih bulan (showPicker tidak ada di semua browser)
+      m.addEventListener('click', function () { try { if (m.showPicker) m.showPicker(); } catch (err) {} });
     });
     $$('[data-close]').forEach(function (b) { b.addEventListener('click', closeSheets); });
     $$('.backdrop').forEach(function (b) { b.addEventListener('click', function (e) { if (e.target === b) closeSheets(); }); });
