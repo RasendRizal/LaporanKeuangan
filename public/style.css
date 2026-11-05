@@ -80,7 +80,9 @@ input.month::-webkit-datetime-edit-fields-wrapper { padding: 0; display: flex; j
 input.month::-webkit-datetime-edit-text,
 input.month::-webkit-datetime-edit-month-field,
 input.month::-webkit-datetime-edit-year-field { padding: 0 1px; font-family: inherit; font-size: 12px; font-weight: 600; color: var(--ink); }
-input.month::-webkit-calendar-picker-indicator { display: none; }
+/* Indikator kalender dibuat transparan dan menutupi seluruh kotak, agar di PC klik di mana saja membuka pemilih bulan */
+input.month { position: relative; cursor: pointer; }
+input.month::-webkit-calendar-picker-indicator { display: block; position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0; opacity: 0; cursor: pointer; }
 input.month::-webkit-date-and-time-value { text-align: center; margin: 0; min-height: 0; }
 .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .tile { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 16px; min-width: 0; }
@@ -153,7 +155,8 @@ select { background-image: linear-gradient(45deg, transparent 50%, var(--muted) 
   background-position: calc(100% - 20px) 50%, calc(100% - 15px) 50%; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 34px; }
 input:focus, select:focus, textarea:focus { border-color: var(--teal); background: #fff; }
 textarea { resize: none; }
-.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.grid2 > .field { min-width: 0; }
 .grid2 .field:only-child { grid-column: 1 / -1; }
 .money { display: flex; align-items: center; background: var(--bg); border-radius: 12px; margin-top: 5px; padding-left: 14px; }
 .money span { font-weight: 600; color: var(--ink); }
@@ -172,7 +175,7 @@ textarea { resize: none; }
 /* ---------- Bottom sheet ---------- */
 .backdrop { position: fixed; inset: 0; z-index: 50; background: rgba(31, 42, 68, .4); display: flex; align-items: flex-end; justify-content: center; animation: fade .2s; }
 .sheet {
-  background: #fff; width: 100%; max-width: 520px; max-height: 92vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  background: #fff; width: 100%; max-width: 520px; max-height: 92vh; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; touch-action: pan-y; -webkit-overflow-scrolling: touch;
   border-radius: 24px 24px 0 0; padding: 10px 18px calc(env(safe-area-inset-bottom, 0px) + 22px); animation: up .25s ease;
 }
 .grab { width: 40px; height: 4px; border-radius: 4px; background: var(--line); margin: 0 auto 12px; }
@@ -302,10 +305,10 @@ input.set-edit { margin: 0; min-height: 38px; padding: 7px 10px; font-size: 14px
 .rinc { margin: -4px 0 12px; }
 .rinc-panel { background: var(--bg); border-radius: 14px; padding: 12px; margin-top: 8px; }
 .rinc-panel > .muted { margin-bottom: 8px; }
-.rinc-row { background: #fff; border-radius: 12px; padding: 8px; margin-bottom: 8px; }
-.rinc-row input { margin: 0; min-height: 40px; padding: 8px 10px; font-size: 16px; }
+.rinc-row { background: #fff; border-radius: 12px; padding: 8px; margin-bottom: 8px; min-width: 0; }
+.rinc-row input { margin: 0; min-width: 0; min-height: 40px; padding: 8px 10px; font-size: 16px; }
 .rinc-row .r-nama { margin-bottom: 6px; }
-.rinc-nums { display: grid; grid-template-columns: 1.5fr .7fr 1.1fr 34px; gap: 6px; align-items: center; }
+.rinc-nums { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, .8fr) minmax(0, 1.1fr) 34px; gap: 6px; align-items: center; }
 .rinc-nums .icon-btn { min-width: 34px; height: 40px; padding: 0; }
 .r-sub { display: block; margin-top: 4px; text-align: right; font-size: 11px; color: var(--muted); }
 .rinc-tax { margin-top: 12px; }
