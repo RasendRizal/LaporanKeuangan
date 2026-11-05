@@ -189,14 +189,33 @@
     if (!d.recent.length) { ul.innerHTML = '<li class="empty-list">Belum ada transaksi di bulan ini.</li>'; return; }
     ul.innerHTML = d.recent.map(function (t) {
       var sign = t.jenis === 'Pemasukan' ? '+' : t.jenis === 'Pengeluaran' ? '−' : '';
+      var r = t.rincian;
       return '<li class="trx">' +
         '<span class="dot t-' + t.jenis + '">' + ICON[t.jenis] + '</span>' +
-        '<div class="trx-main"><b>' + esc(t.nama) + '</b><small>' + esc(t.kategori) + ' · ' + esc(t.dompet) + ' · ' + shortDate(t.tanggal) + ' · ' + esc(t.oleh) + '</small></div>' +
+        '<div class="trx-main"' + (r ? ' data-rinc' : '') + '><b>' + esc(t.nama) + '</b><small>' + esc(t.kategori) + ' · ' + esc(t.dompet) + ' · ' + shortDate(t.tanggal) + ' · ' + esc(t.oleh) + (r ? ' · ' + r.items.length + ' barang ▾' : '') + '</small></div>' +
         '<div class="trx-amt amt-' + t.jenis + '">' + sign + rp(t.nominal) + '</div>' +
         (isAdmin ? '<span class="row-actions"><button class="icon-btn" type="button" data-act="edit" data-id="' + esc(t.id) + '" aria-label="Edit">' + IC_EDIT + '</button>' +
           '<button class="icon-btn del" type="button" data-act="del" data-id="' + esc(t.id) + '" aria-label="Hapus">' + IC_DEL + '</button></span>' : '') +
+        (r ? '<div class="trx-detail hidden">' + rincDetail(r) + '</div>' : '') +
         '</li>';
     }).join('');
+  }
+
+  function fmtQty(q) { return String(q).replace('.', ','); }
+
+  /** Isi panel detail di daftar transaksi: barang, diskon, pajak, total. */
+  function rincDetail(r) {
+    var sub = 0;
+    var h = r.items.map(function (it) {
+      var line = Math.round(it.harga * it.qty) - it.diskon;
+      sub += line;
+      return '<div><span class="l">' + esc(it.nama) + '<small>' + fmtQty(it.qty) + ' × ' + rp(it.harga) + (it.diskon ? ' − diskon ' + rp(it.diskon) : '') + '</small></span><span class="r">' + rp(line) + '</span></div>';
+    }).join('');
+    if (r.pajak && r.pajak.nominal > 0) {
+      h += '<div><span class="l">PPN' + (r.pajak.termasuk ? ' (sudah termasuk)' : '') + '</span><span class="r">' + (r.pajak.termasuk ? '' : '+') + rp(r.pajak.nominal) + '</span></div>';
+      if (!r.pajak.termasuk) sub += r.pajak.nominal;
+    }
+    return h + '<div class="tot"><span class="l">Total</span><span class="r">' + rp(sub) + '</span></div>';
   }
 
   /** Konfirmasi dua langkah: ketukan pertama menampilkan "Yakin?". */
@@ -207,7 +226,11 @@
 
   function onRecentClick(e) {
     var btn = e.target.closest('[data-act]');
-    if (!btn) return;
+    if (!btn) {
+      var main = e.target.closest('[data-rinc]');
+      if (main) main.closest('.trx').querySelector('.trx-detail').classList.toggle('hidden');
+      return;
+    }
     if (btn.dataset.act === 'edit') {
       var t = state.dash.recent.filter(function (x) { return x.id === btn.dataset.id; })[0];
       if (t) openTrxForm(t);
@@ -651,6 +674,8 @@
     if (cur) sel.value = cur;
     var isTransfer = jenis === 'Transfer';
     show($('#tTujuanWrap'), isTransfer);
+    show($('#rincWrap'), !isTransfer);
+    if (isTransfer && readRinc().length) clearRinc();
     $('#tDompetLabel').textContent = isTransfer ? 'Dompet Asal' : 'Dompet';
     var n = $('#tDompet').options.length;
     if (isTransfer && n > 1 && $('#tTujuan').value === $('#tDompet').value) {
@@ -750,10 +775,98 @@
     e.target.value = digits ? nf.format(Number(digits)) : '';
   }
 
+  /* ---------- Rincian belanja (opsional) ---------- */
+  function qtyVal(s) { var n = Number(String(s).replace(',', '.')); return isFinite(n) ? Math.round(n * 1000) / 1000 : 0; }
+
+  function rincRow(it) {
+    it = it || {};
+    return '<div class="rinc-row">' +
+      '<input class="r-nama" type="text" maxlength="100" placeholder="Nama barang" value="' + esc(it.nama || '') + '">' +
+      '<div class="rinc-nums">' +
+      '<input class="r-harga" type="text" inputmode="numeric" placeholder="Harga" autocomplete="off" value="' + (it.harga ? nf.format(it.harga) : '') + '">' +
+      '<input class="r-qty" type="text" inputmode="decimal" placeholder="Qty" autocomplete="off" value="' + (it.qty ? fmtQty(it.qty) : '1') + '">' +
+      '<input class="r-diskon" type="text" inputmode="numeric" placeholder="Diskon" autocomplete="off" value="' + (it.diskon ? nf.format(it.diskon) : '') + '">' +
+      '<button class="icon-btn del" type="button" data-rdel aria-label="Hapus barang">' + IC_DEL + '</button></div>' +
+      '<small class="r-sub"></small></div>';
+  }
+
+  function rowVals(row) {
+    return {
+      nama: row.querySelector('.r-nama').value.trim(),
+      harga: Number(row.querySelector('.r-harga').value.replace(/\D/g, '')) || 0,
+      qty: qtyVal(row.querySelector('.r-qty').value),
+      diskon: Number(row.querySelector('.r-diskon').value.replace(/\D/g, '')) || 0
+    };
+  }
+
+  /** Barang yang terisi (baris kosong diabaikan). */
+  function readRinc() {
+    return $$('#rincList .rinc-row').map(rowVals).filter(function (it) { return it.nama || it.harga; });
+  }
+
+  /** Hitung ulang subtotal, ringkasan, dan nominal transaksi. Nominal dikunci selama ada rincian. */
+  function calcRinc() {
+    var sub = 0, n = 0;
+    $$('#rincList .rinc-row').forEach(function (row) {
+      var v = rowVals(row), line = Math.round(v.harga * v.qty) - v.diskon;
+      row.querySelector('.r-sub').textContent = v.harga ? '= ' + rp(line) : '';
+      if (v.nama || v.harga) { sub += line; n++; }
+    });
+    var pajak = digits('#rPajak'), add = $('#rPajakMode').value === 'add';
+    var total = sub + (add ? pajak : 0);
+    var h = '<div><span>Subtotal (' + n + ' barang)</span><span>' + rp(sub) + '</span></div>';
+    if (pajak) h += '<div><span>PPN' + (add ? '' : ' (sudah termasuk)') + '</span><span>' + (add ? '+' : '') + rp(pajak) + '</span></div>';
+    h += '<div class="tot"><span>Total</span><span>' + rp(total) + '</span></div>';
+    $('#rincSum').innerHTML = h;
+    $('#rincBtn').textContent = n ? 'Rincian belanja · ' + n + ' barang' : '+ Rincian belanja (opsional)';
+    var nom = $('#tNominal');
+    nom.readOnly = n > 0;
+    if (n > 0) nom.value = total > 0 ? nf.format(total) : '';
+  }
+
+  function clearRinc() {
+    $('#rincList').innerHTML = '';
+    $('#rPajak').value = ''; $('#rPajakMode').value = 'in';
+    show($('#rincPanel'), false);
+    calcRinc();
+  }
+
+  function addRincRow(it) {
+    $('#rincList').insertAdjacentHTML('beforeend', rincRow(it));
+    return $('#rincList').lastElementChild;
+  }
+
+  function onRincToggle() {
+    var panel = $('#rincPanel'), open = panel.classList.contains('hidden');
+    show(panel, open);
+    if (open && !$$('#rincList .rinc-row').length) addRincRow().querySelector('.r-nama').focus();
+  }
+
+  function onRincAdd() {
+    addRincRow().querySelector('.r-nama').focus();
+    calcRinc();
+  }
+
+  function onRincInput(e) {
+    var c = e.target.classList;
+    if (c.contains('r-harga') || c.contains('r-diskon')) onNominalInput(e);
+    else if (c.contains('r-qty')) e.target.value = e.target.value.replace(/[^\d.,]/g, '');
+    calcRinc();
+  }
+
+  function onRincClick(e) {
+    var del = e.target.closest('[data-rdel]');
+    if (!del) return;
+    del.closest('.rinc-row').remove();
+    calcRinc();
+  }
+
   /** Tanpa argumen = tambah baru; dengan objek transaksi = mode edit. */
   function openTrxForm(t) {
     editTrxId = t ? t.id : null;
     $('#trxForm').reset();
+    $('#rincList').innerHTML = '';
+    show($('#rincPanel'), false);
     $('#trxTitle').textContent = t ? 'Edit Transaksi' : 'Tambah Transaksi';
     $('#trxBtn').textContent = t ? 'Simpan Perubahan' : 'Simpan Transaksi';
     if (t) {
@@ -767,11 +880,19 @@
       $('#tNama').value = t.nama;
       $('#tNominal').value = nf.format(t.nominal);
       $('#tKet').value = t.keterangan || '';
+      if (t.rincian) {
+        t.rincian.items.forEach(function (it) { addRincRow(it); });
+        if (t.rincian.pajak) {
+          $('#rPajak').value = t.rincian.pajak.nominal ? nf.format(t.rincian.pajak.nominal) : '';
+          $('#rPajakMode').value = t.rincian.pajak.termasuk ? 'in' : 'add';
+        }
+      }
     } else {
       $('#tTanggal').value = today();
       $('#tJenis').value = 'Pengeluaran';
       onJenisChange();
     }
+    calcRinc();
     setErr('#trxErr', '');
     openSheet('#sheetTrx');
   }
@@ -789,6 +910,14 @@
       nominal: Number($('#tNominal').value.replace(/\D/g, '')),
       keterangan: $('#tKet').value
     };
+    var items = payload.jenis === 'Transfer' ? [] : readRinc();
+    if (items.length) {
+      for (var i = 0; i < items.length; i++) {
+        if (!items[i].nama) { setErr('#trxErr', 'Nama barang #' + (i + 1) + ' wajib diisi.'); return; }
+        if (!items[i].qty) { setErr('#trxErr', 'Qty "' + items[i].nama + '" harus lebih dari 0.'); return; }
+      }
+      payload.rincian = { items: items, pajak: { nominal: digits('#rPajak'), termasuk: $('#rPajakMode').value === 'in' } };
+    }
     if (!payload.nominal) { setErr('#trxErr', 'Nominal wajib diisi.'); return; }
     $('#trxBtn').disabled = true;
     var req = editTrxId ? call('apiUpdateTransaction', state.token, state.kasId, editTrxId, payload) : call('apiAddTransaction', state.token, state.kasId, payload);
@@ -860,6 +989,13 @@
     $('#tDompet').addEventListener('change', onJenisChange);
     $('#tNominal').addEventListener('input', onNominalInput);
     $('#trxForm').addEventListener('submit', onTrxSubmit);
+    $('#rincBtn').addEventListener('click', onRincToggle);
+    $('#rincAdd').addEventListener('click', onRincAdd);
+    $('#rincClear').addEventListener('click', clearRinc);
+    $('#rincList').addEventListener('input', onRincInput);
+    $('#rincList').addEventListener('click', onRincClick);
+    $('#rPajak').addEventListener('input', function (e) { onNominalInput(e); calcRinc(); });
+    $('#rPajakMode').addEventListener('change', calcRinc);
     $('#collabForm').addEventListener('submit', onCollabSubmit);
     $('#kasList').addEventListener('click', onKasPick);
     $('#kasForm').addEventListener('submit', onKasCreate);

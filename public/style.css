@@ -297,3 +297,30 @@ input.set-edit { margin: 0; min-height: 38px; padding: 7px 10px; font-size: 14px
 .grp + .bill-list { margin-top: 2px; }
 .bill-amt .per { display: block; font-size: 10px; font-weight: 500; color: var(--muted); line-height: 1.1; }
 .pay-info { background: var(--bg); border-radius: 14px; padding: 12px 14px; margin-bottom: 14px; font-size: 13px; }
+
+/* ---------- Rincian belanja (opsional) ---------- */
+.rinc { margin: -4px 0 12px; }
+.rinc-panel { background: var(--bg); border-radius: 14px; padding: 12px; margin-top: 8px; }
+.rinc-panel > .muted { margin-bottom: 8px; }
+.rinc-row { background: #fff; border-radius: 12px; padding: 8px; margin-bottom: 8px; }
+.rinc-row input { margin: 0; min-height: 40px; padding: 8px 10px; font-size: 16px; }
+.rinc-row .r-nama { margin-bottom: 6px; }
+.rinc-nums { display: grid; grid-template-columns: 1.5fr .7fr 1.1fr 34px; gap: 6px; align-items: center; }
+.rinc-nums .icon-btn { min-width: 34px; height: 40px; padding: 0; }
+.r-sub { display: block; margin-top: 4px; text-align: right; font-size: 11px; color: var(--muted); }
+.rinc-tax { margin-top: 12px; }
+.rinc-tax .field { margin-bottom: 8px; }
+.rinc-tax .money { background: #fff; }
+.rinc-tax select { background-color: #fff; }
+.rinc-sum { font-size: 12px; color: var(--muted); border-top: 1px dashed var(--line); padding-top: 8px; }
+.rinc-sum div { display: flex; justify-content: space-between; padding: 2px 0; }
+.rinc-sum .tot { color: var(--ink); font-weight: 600; font-size: 13px; }
+.rinc-clear { display: block; margin-top: 10px; color: #E5522F; }
+.trx { flex-wrap: wrap; }
+.trx-main[data-rinc] { cursor: pointer; }
+.trx-detail { flex: 0 0 100%; background: var(--bg); border-radius: 12px; padding: 8px 12px; font-size: 11px; margin-bottom: 4px; }
+.trx-detail > div { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; }
+.trx-detail .l { min-width: 0; overflow-wrap: anywhere; }
+.trx-detail .r { white-space: nowrap; font-weight: 600; }
+.trx-detail small { display: block; color: var(--muted); font-weight: 400; font-size: 11px; }
+.trx-detail .tot { border-top: 1px dashed var(--line); margin-top: 3px; padding-top: 5px; }

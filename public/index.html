@@ -328,6 +328,24 @@
         <label class="field">Nominal
           <div class="money"><span>Rp</span><input id="tNominal" type="text" inputmode="numeric" placeholder="0" autocomplete="off" required></div>
         </label>
+        <div id="rincWrap" class="rinc">
+          <button id="rincBtn" class="link" type="button">+ Rincian belanja (opsional)</button>
+          <div id="rincPanel" class="rinc-panel hidden">
+            <p class="muted small">Isi nama barang, lalu harga satuan, qty, dan diskon (Rp). Nominal di atas dihitung otomatis.</p>
+            <div id="rincList"></div>
+            <button id="rincAdd" class="link" type="button">+ Tambah barang</button>
+            <div class="grid2 rinc-tax">
+              <label class="field">Pajak (PPN)
+                <div class="money"><span>Rp</span><input id="rPajak" type="text" inputmode="numeric" placeholder="0" autocomplete="off"></div>
+              </label>
+              <label class="field">Pajak dihitung
+                <select id="rPajakMode"><option value="in">Sudah termasuk harga</option><option value="add">Ditambahkan ke total</option></select>
+              </label>
+            </div>
+            <div id="rincSum" class="rinc-sum"></div>
+            <button id="rincClear" class="link rinc-clear" type="button">Hapus rincian</button>
+          </div>
+        </div>
         <label class="field">Keterangan (opsional)<textarea id="tKet" rows="2" maxlength="500" placeholder="Catatan tambahan"></textarea></label>
         <p id="trxErr" class="error hidden"></p>
         <button id="trxBtn" class="btn btn-primary" type="submit">Simpan Transaksi</button>
