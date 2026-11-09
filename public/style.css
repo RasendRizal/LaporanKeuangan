@@ -341,6 +341,67 @@ input.set-edit { margin: 0; min-height: 38px; padding: 7px 10px; font-size: 14px
   .set-link:hover { background: #E4E9F2; }
 }
 
+/* ---------- Tombol tambah transaksi di tengah navbar ---------- */
+.navadd {
+  flex: none; align-self: center; width: 54px; height: 54px; margin: -30px 6px 0; padding: 0; border: 4px solid #fff; border-radius: 50%;
+  display: grid; place-items: center; cursor: pointer; color: #fff;
+  background: linear-gradient(135deg, #8B7CF6, #6A5AE0); box-shadow: 0 8px 18px rgba(106, 90, 224, .4);
+  transition: transform .12s ease, filter .15s ease;
+}
+.navadd .ico { width: 26px; height: 26px; stroke-width: 2.4; }
+.navadd:active { transform: scale(.92); }
+@media (hover: hover) { .navadd:hover { filter: brightness(.92); } }
+
+/* ---------- Split Bill ---------- */
+.sp-intro { margin: 4px 0 12px; line-height: 1.5; }
+.sp-add input { margin: 0; } .sp-add .btn { width: auto; }
+.sp-people { list-style: none; padding: 0; margin: 12px 0 8px; display: flex; flex-wrap: wrap; gap: 8px; }
+.sp-person { display: inline-flex; align-items: center; gap: 6px; background: var(--purple-s); color: var(--purple); border-radius: 999px; padding: 6px 6px 6px 12px; font-size: 13px; font-weight: 600; }
+.sp-person button { border: 0; background: #fff; color: var(--muted); width: 22px; height: 22px; border-radius: 50%; font-size: 10px; cursor: pointer; line-height: 1; }
+.sp-empty { color: var(--muted); font-size: 12px; }
+.sp-item, .sp-extra { background: var(--bg); border-radius: 14px; padding: 10px; margin-top: 10px; min-width: 0; }
+.sp-item-top { display: flex; gap: 8px; align-items: center; }
+.sp-item input, .sp-extra input, .sp-extra select { margin: 0; min-width: 0; min-height: 42px; padding: 8px 10px; background: #fff; }
+.sp-item-top input { flex: 1; min-width: 0; }
+.sp-item-top .icon-btn { flex: none; height: 42px; min-width: 38px; }
+.sp-nums { display: grid; grid-template-columns: minmax(0, .7fr) minmax(0, 1.3fr); gap: 8px; margin-top: 8px; }
+.sp-nums3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.sp-nums2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.sp-nums label, .sp-lbl { display: block; font-size: 11px; font-weight: 500; color: var(--muted); }
+.sp-nums label input, .sp-nums label select, .sp-lbl select { margin-top: 4px; }
+.sp-lbl { margin-top: 8px; }
+.sp-who { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+.sp-chip {
+  border: 0; font: inherit; font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 999px; cursor: pointer;
+  background: #fff; color: var(--muted); transition: background-color .15s ease, color .15s ease;
+}
+.sp-chip.on { background: var(--purple-s); color: var(--purple); }
+.sp-chip.add { background: transparent; border: 1.5px dashed var(--line); color: var(--teal-d); }
+.sp-quick { display: flex; flex-wrap: wrap; gap: 8px; }
+.sp-sum { background: var(--bg); border-radius: 14px; padding: 10px 12px; font-size: 13px; }
+.sp-sum > div { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; }
+.sp-sum small { display: block; font-size: 10px; color: var(--muted); }
+.sp-sum .tot { border-top: 1px dashed var(--line); margin-top: 4px; padding-top: 7px; font-weight: 700; font-size: 14px; }
+.sp-head { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+.sp-head b { color: var(--ink); font-size: 14px; display: block; }
+.neg { color: #E5522F; }
+.sp-pcard { border: 1.5px solid var(--line); border-radius: 14px; padding: 10px 12px; margin-bottom: 8px; }
+.sp-ptop { display: flex; align-items: center; gap: 8px; }
+.sp-ptop b { font-size: 14px; }
+.sp-ptop em { font-style: normal; font-size: 10px; font-weight: 600; background: var(--green-s); color: #0E9A58; border-radius: 999px; padding: 2px 8px; }
+.sp-ptot { margin-left: auto; font-weight: 700; font-size: 14px; white-space: nowrap; }
+.sp-pl { margin-top: 6px; font-size: 12px; color: var(--muted); }
+.sp-pl > div { display: flex; justify-content: space-between; gap: 10px; padding: 2px 0; }
+.sp-pl span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.sp-pl span:last-child { white-space: nowrap; }
+.sp-pay { background: var(--purple-s); border-radius: 14px; padding: 10px 12px; font-size: 13px; }
+.sp-pay > div { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; }
+.sp-pay b { white-space: nowrap; }
+.sp-warn { background: #FFF6E0; color: #B7791F; border-radius: 10px; padding: 8px 12px; font-size: 12px; margin-top: 8px; }
+.sp-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.sp-actions .btn-ghost { margin-top: 0; }
+.sp-actions .btn-ghost.confirm { background: var(--red); color: #fff; }
+
 /* ---------- Rincian belanja (opsional) ---------- */
 .rinc { margin: -4px 0 12px; }
 .rinc-panel { background: var(--bg); border-radius: 14px; padding: 12px; margin-top: 8px; }

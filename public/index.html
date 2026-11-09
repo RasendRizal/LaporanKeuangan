@@ -91,7 +91,7 @@
     <section class="card c-menu">
       <div class="submenu">
         <button type="button" class="sub-item" data-go="bill"><span class="sub-ico"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span><span class="sub-name">Tagihan</span></button>
-        <button type="button" class="sub-item soon" disabled aria-disabled="true"><span class="sub-ico"><svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span class="sub-name">Segera</span></button>
+        <button type="button" class="sub-item" data-go="split"><span class="sub-ico"><svg class="ico" viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M12 7v7M9.5 9.5h4a1.5 1.5 0 0 1 0 3h-3a1.5 1.5 0 0 0 0 3H14"/></svg></span><span class="sub-name">Split Bill</span></button>
         <button type="button" class="sub-item soon" disabled aria-disabled="true"><span class="sub-ico"><svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span class="sub-name">Segera</span></button>
         <button type="button" class="sub-item soon" disabled aria-disabled="true"><span class="sub-ico"><svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span class="sub-name">Segera</span></button>
         <button type="button" class="sub-item soon" disabled aria-disabled="true"><span class="sub-ico"><svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span class="sub-name">Segera</span></button>
@@ -114,16 +114,51 @@
       <ul id="dueList" class="due-list"></ul>
     </section>
 
-    <!-- Kartu 4: Aksi Cepat -->
-    <section class="card c-actions">
-      <h3>Aksi Cepat</h3>
-      <div class="actions">
-        <button id="btnAddTrx" class="btn btn-primary big" type="button"><svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Tambah Transaksi</button>
-        <button id="btnAddCollab" class="btn btn-soft big" type="button"><svg class="ico" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14c2.5 0 4.5 2 4.5 5"/></svg>Tambah Kolaborator</button>
-      </div>
-      <p id="viewerNote" class="muted small hidden">Anda memiliki akses lihat saja (Viewer) di buku kas ini.</p>
-    </section>
+    </main>
 
+    <!-- Halaman Split Bill (dihitung di browser, tidak disimpan) -->
+    <main id="tab-split" class="bento tab-pane hidden">
+      <section class="card c-bills">
+        <div class="row between"><h3>Split Bill</h3><button id="splitBack" class="link" type="button">‹ Beranda</button></div>
+        <p class="muted small sp-intro">Bagi tagihan makan atau belanja bersama. Isi orang, item, lalu pembagiannya. Data ini hanya dihitung di layar dan tidak disimpan.</p>
+        <label class="field">Nama acara (opsional)<input id="spTitle" type="text" maxlength="60" placeholder="cth: Makan malam Sabtu"></label>
+      </section>
+
+      <section class="card c-bills">
+        <h3>Orang</h3>
+        <form id="spPersonForm" class="row gap sp-add">
+          <input id="spPersonName" type="text" maxlength="30" placeholder="Nama orang" autocomplete="off">
+          <button class="btn btn-soft" type="submit">Tambah</button>
+        </form>
+        <ul id="spPeople" class="sp-people"></ul>
+        <label id="spPayerWrap" class="field hidden">Dibayar oleh<select id="spPayer"></select></label>
+      </section>
+
+      <section class="card c-bills">
+        <div class="row between"><h3>Item</h3><button id="spAddItem" class="btn btn-soft sm" type="button">+ Tambah item</button></div>
+        <div id="spItems"></div>
+      </section>
+
+      <section class="card c-bills">
+        <h3>Pajak, service, diskon &amp; lainnya</h3>
+        <p class="muted small sp-intro">Persen dihitung dari subtotal item. Pilih dibagi rata atau proporsional (sesuai besar pesanan tiap orang).</p>
+        <div class="sp-quick">
+          <button type="button" class="sp-chip add" data-add="pajak">+ Pajak</button>
+          <button type="button" class="sp-chip add" data-add="service">+ Service</button>
+          <button type="button" class="sp-chip add" data-add="diskon">+ Diskon</button>
+          <button type="button" class="sp-chip add" data-add="lain">+ Lainnya</button>
+        </div>
+        <div id="spExtras"></div>
+      </section>
+
+      <section class="card c-bills">
+        <h3>Laporan</h3>
+        <div id="spReportBody"></div>
+        <div class="sp-actions">
+          <button id="spCopy" class="btn btn-soft" type="button">Salin laporan</button>
+          <button id="spReset" class="btn btn-ghost" type="button">Reset</button>
+        </div>
+      </section>
     </main>
 
     <!-- Tab Pengaturan -->
@@ -135,6 +170,7 @@
           <li><button type="button" class="set-link" data-set="dompet"><span class="set-link-text"><b>Pengaturan Dompet</b><small id="cntDompet"></small></span><svg class="ico chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button></li>
           <li><button type="button" class="set-link" data-set="out"><span class="set-link-text"><b>Pengaturan Kategori Pengeluaran</b><small id="cntOut"></small></span><svg class="ico chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button></li>
           <li><button type="button" class="set-link" data-set="inn"><span class="set-link-text"><b>Pengaturan Kategori Pemasukan</b><small id="cntIn"></small></span><svg class="ico chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button></li>
+          <li><button type="button" class="set-link" data-collab><span class="set-link-text"><b>Tambah Kolaborator</b><small id="cntCollab"></small></span><svg class="ico chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button></li>
         </ul>
       </section>
       <section id="setNote" class="card c-wallets hidden">
@@ -198,6 +234,7 @@
   <nav class="tabbar">
       <button type="button" class="tabbtn active" data-tab="home"><svg class="ico" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg>Beranda</button>
       <button type="button" class="tabbtn" data-tab="trx"><svg class="ico" viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>Transaksi</button>
+      <button id="navAdd" class="navadd hidden" type="button" aria-label="Tambah transaksi"><svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
       <button type="button" class="tabbtn" data-tab="dep"><svg class="ico" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Kekayaan</button>
       <button type="button" class="tabbtn" data-tab="settings"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Pengaturan</button>
     </nav>

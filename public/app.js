@@ -215,8 +215,7 @@
     $('#income').textContent = rp(d.income);
     $('#expense').textContent = rp(d.expense);
 
-    show($('#btnAddTrx'), isAdmin); show($('#btnAddTrx2'), isAdmin); show($('#btnAddCollab'), isAdmin); show($('#viewerNote'), !isAdmin);
-    $('.actions').style.gridTemplateColumns = isAdmin ? '1fr 1fr' : '1fr';
+    show($('#navAdd'), isAdmin); show($('#btnAddTrx2'), isAdmin);
 
     renderChart(d);
     renderRecent(d, isAdmin);
@@ -230,6 +229,7 @@
       var list = d.settings[p[1]];
       $(p[0]).textContent = list.length + ' item' + (list.some(function (x) { return x.sembunyi; }) ? ' · ' + list.filter(function (x) { return x.sembunyi; }).length + ' disembunyikan' : '');
     });
+    $('#cntCollab').textContent = d.members.length + ' anggota';
   }
 
   function renderChart(d) {
@@ -323,8 +323,8 @@
 
   /* ---------- Tab & Dompet ---------- */
   function setTab(name) {
-    ['home', 'trx', 'bill', 'dep', 'settings'].forEach(function (t) { show($('#tab-' + t), t === name); });
-    var nav = name === 'bill' ? 'home' : name; // Tagihan dibuka dari submenu Beranda
+    ['home', 'trx', 'bill', 'split', 'dep', 'settings'].forEach(function (t) { show($('#tab-' + t), t === name); });
+    var nav = (name === 'bill' || name === 'split') ? 'home' : name; // Tagihan & Split Bill dibuka dari submenu Beranda
     $$('.tabbtn').forEach(function (b) { b.classList.toggle('active', b.dataset.tab === nav); });
     window.scrollTo(0, 0);
   }
@@ -1064,14 +1064,352 @@
     }).catch(function (err) { setErr('#kasErr', err.message); });
   }
 
+  /* ---------- Split Bill (dihitung di browser, tidak disimpan) ---------- */
+  var sp = { title: '', people: [], payer: '', items: [], extras: [], seq: 0 };
+  var SP_EXTRA = {
+    pajak: { nama: 'Pajak (PB1)', mode: 'persen', nilai: 10, bagi: 'prop', sign: 1 },
+    service: { nama: 'Service charge', mode: 'persen', nilai: 5, bagi: 'prop', sign: 1 },
+    diskon: { nama: 'Diskon', mode: 'rp', nilai: 0, bagi: 'prop', sign: -1 },
+    lain: { nama: 'Biaya lain', mode: 'rp', nilai: 0, bagi: 'rata', sign: 1 }
+  };
+
+  function spId() { return 's' + (++sp.seq); }
+  function spFind(list, id) { return list.filter(function (x) { return x.id === id; })[0]; }
+  function numFrom(s) { return Number(String(s).replace(/\D/g, '')) || 0; }
+  function spAllIds() { return sp.people.map(function (p) { return p.id; }); }
+  function spName(id) { return (spFind(sp.people, id) || {}).nama || '-'; }
+  function spWho(it) {
+    var all = spAllIds();
+    return it.who === null ? all : all.filter(function (id) { return it.who.indexOf(id) >= 0; });
+  }
+  function spSigned(n) { return (n < 0 ? '−' : '+') + rp(Math.abs(n)); }
+
+  /** Bagi `total` (rupiah bulat, boleh negatif) menurut bobot; sisa pembulatan diberikan ke pecahan terbesar sehingga jumlahnya selalu pas. */
+  function spAlloc(total, w) {
+    var sign = total < 0 ? -1 : 1, t = Math.abs(total);
+    var sum = w.reduce(function (a, b) { return a + b; }, 0);
+    if (!sum) return w.map(function () { return 0; });
+    var base = w.map(function (x) { return Math.floor(t * x / sum); });
+    var rem = t - base.reduce(function (a, b) { return a + b; }, 0);
+    var order = w.map(function (x, i) { return { i: i, f: t * x / sum - base[i] }; }).sort(function (a, b) { return b.f - a.f; });
+    for (var k = 0; k < rem; k++) base[order[k % order.length].i]++;
+    return base.map(function (x) { return x * sign; });
+  }
+
+  function spExtraLabel(x) {
+    var n = (x.nama || '').trim() || 'Biaya';
+    return x.mode === 'persen' && x.nilai ? n + ' (' + String(x.nilai).replace('.', ',') + '%)' : n;
+  }
+
+  function spCompute() {
+    var ids = spAllIds(), per = {}, warn = [], subAll = 0, extras = [], extraAmt = {};
+    ids.forEach(function (id) { per[id] = { sub: 0, extra: 0, total: 0, lines: [], extraLines: [] }; });
+    sp.items.forEach(function (it) {
+      var total = Math.round(it.qty * it.harga);
+      if (!total) return;
+      var who = spWho(it);
+      if (!who.length) { warn.push('Item "' + ((it.nama || '').trim() || 'tanpa nama') + '" belum dibebankan ke siapa pun, tidak ikut dihitung.'); return; }
+      var parts = spAlloc(total, who.map(function () { return 1; }));
+      who.forEach(function (id, i) {
+        per[id].sub += parts[i];
+        per[id].lines.push({ nama: (it.nama || '').trim() || 'Item', qty: it.qty, harga: it.harga, n: who.length, bagian: parts[i] });
+      });
+      subAll += total;
+    });
+    sp.extras.forEach(function (x) {
+      var amt = (x.mode === 'persen' ? Math.round(subAll * x.nilai / 100) : Math.round(x.nilai)) * x.sign;
+      extraAmt[x.id] = amt;
+      if (!amt) return;
+      var ppl = ids.filter(function (id) { return per[id].sub > 0; });
+      if (!ppl.length) return;
+      var parts = spAlloc(amt, ppl.map(function (id) { return x.bagi === 'prop' ? per[id].sub : 1; }));
+      var label = spExtraLabel(x);
+      ppl.forEach(function (id, i) {
+        per[id].extra += parts[i];
+        per[id].extraLines.push({ nama: label, bagian: parts[i] });
+      });
+      extras.push({ nama: label, amt: amt, bagi: x.bagi });
+    });
+    var total = 0;
+    ids.forEach(function (id) {
+      per[id].total = per[id].sub + per[id].extra;
+      total += per[id].total;
+      if (per[id].total < 0) warn.push('Total ' + spName(id) + ' bernilai negatif. Periksa diskon atau potongan.');
+    });
+    return { subAll: subAll, extras: extras, extraAmt: extraAmt, per: per, total: total, warn: warn };
+  }
+
+  /* --- render --- */
+  function spRenderPeople() {
+    $('#spPeople').innerHTML = sp.people.length ? sp.people.map(function (p) {
+      return '<li class="sp-person">' + esc(p.nama) + '<button type="button" data-pdel="' + p.id + '" aria-label="Hapus ' + esc(p.nama) + '">✕</button></li>';
+    }).join('') : '<li class="sp-empty">Belum ada orang. Tambahkan nama di atas.</li>';
+    var sel = $('#spPayer');
+    sel.innerHTML = '<option value="">— pilih —</option>' + sp.people.map(function (p) {
+      return '<option value="' + p.id + '">' + esc(p.nama) + '</option>';
+    }).join('');
+    sel.value = sp.payer;
+    show($('#spPayerWrap'), sp.people.length > 0);
+  }
+
+  function spItemHtml(it) {
+    var all = spAllIds();
+    var isAll = all.length > 0 && (it.who === null || all.every(function (id) { return it.who.indexOf(id) >= 0; }));
+    var chips = all.length ? '<button type="button" class="sp-chip' + (isAll ? ' on' : '') + '" data-who="all">Semua</button>' + sp.people.map(function (p) {
+      var on = it.who === null || it.who.indexOf(p.id) >= 0;
+      return '<button type="button" class="sp-chip' + (on ? ' on' : '') + '" data-who="' + p.id + '">' + esc(p.nama) + '</button>';
+    }).join('') : '<span class="sp-empty">Tambahkan orang dulu</span>';
+    var line = Math.round(it.qty * it.harga);
+    return '<div class="sp-item" data-id="' + it.id + '">' +
+      '<div class="sp-item-top"><input class="i-nama" type="text" maxlength="60" placeholder="Nama item" value="' + esc(it.nama) + '">' +
+      '<button class="icon-btn del" type="button" data-idel aria-label="Hapus item">' + IC_DEL + '</button></div>' +
+      '<div class="sp-nums"><label>Jumlah<input class="i-qty" type="text" inputmode="decimal" autocomplete="off" value="' + fmtQty(it.qty) + '"></label>' +
+      '<label>Harga satuan (Rp)<input class="i-harga" type="text" inputmode="numeric" autocomplete="off" placeholder="0" value="' + (it.harga ? nf.format(it.harga) : '') + '"></label></div>' +
+      '<div class="sp-who"><span class="sp-lbl" style="margin:0">Dibagi ke:</span>' + chips + '</div>' +
+      '<small class="r-sub">' + (line ? '= ' + rp(line) : '') + '</small></div>';
+  }
+
+  function spRenderItems() {
+    $('#spItems').innerHTML = sp.items.length ? sp.items.map(spItemHtml).join('') : '<p class="sp-empty" style="margin-top:10px">Belum ada item. Ketuk "+ Tambah item".</p>';
+  }
+
+  function spExtraHtml(x) {
+    var persen = x.mode === 'persen';
+    var val = !x.nilai ? '' : persen ? String(x.nilai).replace('.', ',') : nf.format(x.nilai);
+    var efek = x.id && x.tipe === 'lain'
+      ? '<label>Efek<select class="x-sign"><option value="1"' + (x.sign === 1 ? ' selected' : '') + '>Menambah</option><option value="-1"' + (x.sign === -1 ? ' selected' : '') + '>Mengurangi</option></select></label>'
+      : '<div class="sp-lbl" style="margin:0">Efek<b style="display:block;color:var(--ink);font-size:13px;margin-top:10px">' + (x.sign < 0 ? 'Mengurangi' : 'Menambah') + '</b></div>';
+    return '<div class="sp-extra" data-id="' + x.id + '">' +
+      '<div class="sp-item-top"><input class="x-nama" type="text" maxlength="40" placeholder="Nama" value="' + esc(x.nama) + '">' +
+      '<button class="icon-btn del" type="button" data-xdel aria-label="Hapus">' + IC_DEL + '</button></div>' +
+      '<div class="sp-nums sp-nums2"><label>Jenis nilai<select class="x-mode"><option value="persen"' + (persen ? ' selected' : '') + '>Persen (%)</option><option value="rp"' + (persen ? '' : ' selected') + '>Nominal (Rp)</option></select></label>' +
+      '<label>' + (persen ? 'Persen' : 'Nominal (Rp)') + '<input class="x-nilai" type="text" inputmode="' + (persen ? 'decimal' : 'numeric') + '" autocomplete="off" placeholder="0" value="' + val + '"></label></div>' +
+      '<div class="sp-nums sp-nums2" style="margin-top:8px"><label>Pembagian<select class="x-bagi"><option value="prop"' + (x.bagi === 'prop' ? ' selected' : '') + '>Proporsional</option><option value="rata"' + (x.bagi === 'rata' ? ' selected' : '') + '>Dibagi rata</option></select></label>' + efek + '</div>' +
+      '<small class="r-sub"></small></div>';
+  }
+
+  function spRenderExtras() {
+    $('#spExtras').innerHTML = sp.extras.length ? sp.extras.map(spExtraHtml).join('') : '<p class="sp-empty" style="margin-top:10px">Belum ada. Pilih salah satu tombol di atas bila struk memuatnya.</p>';
+  }
+
+  function spReportData() {
+    var c = spCompute();
+    return { c: c, has: c.subAll > 0 && sp.people.length > 0 };
+  }
+
+  function spRenderReport() {
+    var r = spReportData(), c = r.c, el = $('#spReportBody');
+    $$('#spExtras .sp-extra').forEach(function (row) {
+      var a = c.extraAmt[row.dataset.id];
+      row.querySelector('.r-sub').textContent = a ? '= ' + spSigned(a) : '';
+    });
+    if (!r.has) { el.innerHTML = '<p class="sp-empty">Tambahkan orang dan item untuk melihat laporan.</p>'; return; }
+    var h = '<div class="sp-head">' + (sp.title.trim() ? '<b>' + esc(sp.title.trim()) + '</b>' : '') + longDate(today()) + '</div>';
+    h += '<div class="sp-sum"><div><span>Subtotal item</span><b>' + rp(c.subAll) + '</b></div>';
+    c.extras.forEach(function (x) {
+      h += '<div><span>' + esc(x.nama) + '<small>' + (x.bagi === 'prop' ? 'dibagi proporsional' : 'dibagi rata') + '</small></span><b class="' + (x.amt < 0 ? 'amt-Pemasukan' : '') + '">' + spSigned(x.amt) + '</b></div>';
+    });
+    h += '<div class="tot"><span>Total tagihan</span><span>' + rp(c.total) + '</span></div></div>';
+    c.warn.forEach(function (w) { h += '<div class="sp-warn">' + esc(w) + '</div>'; });
+
+    h += '<h4>Per orang</h4>';
+    sp.people.forEach(function (p) {
+      var d = c.per[p.id];
+      h += '<div class="sp-pcard"><div class="sp-ptop"><b>' + esc(p.nama) + '</b>' + (sp.payer === p.id ? '<em>Pembayar</em>' : '') + '<span class="sp-ptot' + (d.total < 0 ? ' neg' : '') + '">' + rp(d.total) + '</span></div><div class="sp-pl">';
+      if (!d.lines.length) h += '<div><span>Tidak ada item</span><span></span></div>';
+      d.lines.forEach(function (l) {
+        h += '<div><span>' + esc(l.nama) + ' · ' + fmtQty(l.qty) + ' × ' + rp(l.harga) + (l.n > 1 ? ' ÷ ' + l.n : '') + '</span><span>' + rp(l.bagian) + '</span></div>';
+      });
+      d.extraLines.forEach(function (l) { h += '<div><span>' + esc(l.nama) + '</span><span>' + spSigned(l.bagian) + '</span></div>'; });
+      h += '</div></div>';
+    });
+
+    if (sp.payer && spFind(sp.people, sp.payer)) {
+      var debtors = sp.people.filter(function (p) { return p.id !== sp.payer && c.per[p.id].total > 0; });
+      h += '<h4>Pelunasan ke ' + esc(spName(sp.payer)) + '</h4><div class="sp-pay">';
+      h += debtors.length ? debtors.map(function (p) {
+        return '<div><span>' + esc(p.nama) + '</span><b>' + rp(c.per[p.id].total) + '</b></div>';
+      }).join('') : '<div><span>Tidak ada yang perlu mentransfer.</span></div>';
+      h += '</div>';
+    } else {
+      h += '<div class="sp-warn">Pilih "Dibayar oleh" di bagian Orang untuk melihat siapa yang harus membayar ke siapa.</div>';
+    }
+    el.innerHTML = h;
+  }
+
+  function spRenderAll() {
+    spRenderPeople(); spRenderItems(); spRenderExtras(); spRenderReport();
+  }
+
+  /* --- aksi --- */
+  function spAddPerson(e) {
+    e.preventDefault();
+    var inp = $('#spPersonName'), nama = inp.value.trim().replace(/\s+/g, ' ');
+    if (!nama) return;
+    if (sp.people.some(function (p) { return p.nama.toLowerCase() === nama.toLowerCase(); })) { toast('"' + nama + '" sudah ada'); return; }
+    if (sp.people.length >= 30) { toast('Maksimal 30 orang'); return; }
+    sp.people.push({ id: spId(), nama: nama });
+    inp.value = '';
+    spRenderPeople(); spRenderItems(); spRenderReport();
+    inp.focus();
+  }
+
+  function spRemovePerson(id) {
+    sp.people = sp.people.filter(function (p) { return p.id !== id; });
+    sp.items.forEach(function (it) { if (it.who !== null) it.who = it.who.filter(function (w) { return w !== id; }); });
+    if (sp.payer === id) sp.payer = '';
+    spRenderPeople(); spRenderItems(); spRenderReport();
+  }
+
+  function spAddItem() {
+    if (sp.items.length >= 100) { toast('Maksimal 100 item'); return; }
+    sp.items.push({ id: spId(), nama: '', qty: 1, harga: 0, who: null });
+    spRenderItems(); spRenderReport();
+    var last = $('#spItems').lastElementChild;
+    if (last) last.querySelector('.i-nama').focus();
+  }
+
+  function spAddExtra(tipe) {
+    var base = SP_EXTRA[tipe];
+    if (!base) return;
+    sp.extras.push({ id: spId(), tipe: tipe, nama: base.nama, mode: base.mode, nilai: base.nilai, bagi: base.bagi, sign: base.sign });
+    spRenderExtras(); spRenderReport();
+    var last = $('#spExtras').lastElementChild;
+    if (last) last.querySelector('.x-nilai').focus();
+  }
+
+  function spToggleWho(it, pid) {
+    var all = spAllIds();
+    if (pid === 'all') { it.who = null; return; }
+    var cur = it.who === null ? all.slice() : it.who.filter(function (id) { return all.indexOf(id) >= 0; });
+    var i = cur.indexOf(pid);
+    if (i >= 0) cur.splice(i, 1); else cur.push(pid);
+    it.who = cur.length === all.length ? null : cur; // semua terpilih = ikut otomatis orang yang ditambahkan kemudian
+  }
+
+  function spOnClick(e) {
+    var t = e.target, b;
+    if ((b = t.closest('[data-pdel]'))) { spRemovePerson(b.dataset.pdel); return; }
+    if ((b = t.closest('[data-idel]'))) {
+      var iid = b.closest('.sp-item').dataset.id;
+      sp.items = sp.items.filter(function (x) { return x.id !== iid; });
+      spRenderItems(); spRenderReport(); return;
+    }
+    if ((b = t.closest('[data-xdel]'))) {
+      var xid = b.closest('.sp-extra').dataset.id;
+      sp.extras = sp.extras.filter(function (x) { return x.id !== xid; });
+      spRenderExtras(); spRenderReport(); return;
+    }
+    if ((b = t.closest('[data-who]'))) {
+      var it = spFind(sp.items, b.closest('.sp-item').dataset.id);
+      if (it) { spToggleWho(it, b.dataset.who); spRenderItems(); spRenderReport(); }
+      return;
+    }
+    if ((b = t.closest('[data-add]'))) spAddExtra(b.dataset.add);
+  }
+
+  function spOnInput(e) {
+    var t = e.target, c = t.classList;
+    if (t.tagName === 'SELECT') return; // select ditangani spOnChange
+    if (t.id === 'spTitle') { sp.title = t.value; spRenderReport(); return; }
+    var itEl = t.closest('.sp-item'), xEl = t.closest('.sp-extra');
+    if (itEl) {
+      var it = spFind(sp.items, itEl.dataset.id);
+      if (!it) return;
+      if (c.contains('i-nama')) it.nama = t.value;
+      else if (c.contains('i-qty')) { t.value = t.value.replace(/[^\d.,]/g, ''); it.qty = qtyVal(t.value); }
+      else if (c.contains('i-harga')) { onNominalInput(e); it.harga = numFrom(t.value); }
+      else return;
+      var line = Math.round(it.qty * it.harga);
+      itEl.querySelector('.r-sub').textContent = line ? '= ' + rp(line) : '';
+    } else if (xEl) {
+      var x = spFind(sp.extras, xEl.dataset.id);
+      if (!x) return;
+      if (c.contains('x-nama')) x.nama = t.value;
+      else if (c.contains('x-nilai')) {
+        if (x.mode === 'rp') { onNominalInput(e); x.nilai = numFrom(t.value); }
+        else {
+          t.value = t.value.replace(/[^\d.,]/g, '');
+          x.nilai = Number(t.value.replace(',', '.')) || 0;
+          if (x.nilai > 100) { x.nilai = 100; t.value = '100'; }
+        }
+      } else return;
+    } else return;
+    spRenderReport();
+  }
+
+  function spOnChange(e) {
+    var t = e.target, c = t.classList;
+    if (t.id === 'spPayer') { sp.payer = t.value; spRenderReport(); return; }
+    var xEl = t.closest('.sp-extra');
+    if (!xEl) return;
+    var x = spFind(sp.extras, xEl.dataset.id);
+    if (!x) return;
+    if (c.contains('x-mode')) { x.mode = t.value; x.nilai = 0; spRenderExtras(); }
+    else if (c.contains('x-bagi')) x.bagi = t.value;
+    else if (c.contains('x-sign')) x.sign = Number(t.value) < 0 ? -1 : 1;
+    else return;
+    spRenderReport();
+  }
+
+  function spText() {
+    var c = spCompute(), L = [];
+    L.push('SPLIT BILL' + (sp.title.trim() ? ' - ' + sp.title.trim() : ''));
+    L.push(longDate(today()));
+    L.push('');
+    L.push('Subtotal item: ' + rp(c.subAll));
+    c.extras.forEach(function (x) { L.push(x.nama + ': ' + spSigned(x.amt) + ' (' + (x.bagi === 'prop' ? 'proporsional' : 'dibagi rata') + ')'); });
+    L.push('Total tagihan: ' + rp(c.total));
+    L.push('');
+    L.push('Per orang:');
+    sp.people.forEach(function (p) { L.push('- ' + p.nama + ': ' + rp(c.per[p.id].total) + (sp.payer === p.id ? ' (pembayar)' : '')); });
+    if (sp.payer && spFind(sp.people, sp.payer)) {
+      var debtors = sp.people.filter(function (p) { return p.id !== sp.payer && c.per[p.id].total > 0; });
+      if (debtors.length) {
+        L.push('');
+        L.push('Pelunasan ke ' + spName(sp.payer) + ':');
+        debtors.forEach(function (p) { L.push('- ' + p.nama + ': ' + rp(c.per[p.id].total)); });
+      }
+    }
+    return L.join('\n');
+  }
+
+  function spCopy() {
+    if (!spReportData().has) { toast('Belum ada data untuk disalin'); return; }
+    var txt = spText();
+    var done = function () { toast('Laporan disalin ✓'); };
+    var fallback = function () {
+      var ta = document.createElement('textarea');
+      ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch (err) { toast('Gagal menyalin'); }
+      document.body.removeChild(ta);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done, fallback);
+    else fallback();
+  }
+
+  function spReset() {
+    var btn = $('#spReset');
+    if (!btn.classList.contains('confirm')) { // konfirmasi dua langkah
+      btn.classList.add('confirm'); btn.textContent = 'Yakin reset?';
+      setTimeout(function () { btn.classList.remove('confirm'); btn.textContent = 'Reset'; }, 3000);
+      return;
+    }
+    btn.classList.remove('confirm'); btn.textContent = 'Reset';
+    sp = { title: '', people: [], payer: '', items: [], extras: [], seq: 0 };
+    $('#spTitle').value = '';
+    spRenderAll();
+    toast('Split bill direset');
+  }
+
   /* ---------- Init & event binding ---------- */
   function init() {
     $$('.tab[data-mode]').forEach(function (t) { t.addEventListener('click', function () { setMode(t.dataset.mode); }); });
     $('#authForm').addEventListener('submit', onAuthSubmit);
     $('#kasBtn').addEventListener('click', openKas);
-    $('#btnAddTrx').addEventListener('click', function () { openTrxForm(); });
+    $('#navAdd').addEventListener('click', function () { openTrxForm(); });
     $('#btnAddTrx2').addEventListener('click', function () { openTrxForm(); });
-    $('#btnAddCollab').addEventListener('click', openCollab);
     $('#tJenis').addEventListener('change', onJenisChange);
     $('#tDompet').addEventListener('change', onJenisChange);
     $('#tNominal').addEventListener('input', onNominalInput);
@@ -1091,6 +1429,7 @@
     $$('.tabbtn').forEach(function (b) { b.addEventListener('click', function () { setTab(b.dataset.tab); }); });
     $('#walletList').addEventListener('click', onWalletPick);
     $('#setMenu').addEventListener('click', function (e) {
+      if (e.target.closest('[data-collab]')) { openCollab(); return; }
       var b = e.target.closest('[data-set]');
       if (b) openSettings(b.dataset.set);
     });
@@ -1128,6 +1467,16 @@
     $$('.preset').forEach(function (b) { b.addEventListener('click', function () { setPreset(b.dataset.preset); }); });
     $('#pagePrev').addEventListener('click', function () { gotoPage(state.halaman - 1); });
     $('#pageNext').addEventListener('click', function () { gotoPage(state.halaman + 1); });
+
+    $('#splitBack').addEventListener('click', function () { setTab('home'); });
+    $('#spPersonForm').addEventListener('submit', spAddPerson);
+    $('#spAddItem').addEventListener('click', spAddItem);
+    $('#spCopy').addEventListener('click', spCopy);
+    $('#spReset').addEventListener('click', spReset);
+    $('#tab-split').addEventListener('click', spOnClick);
+    $('#tab-split').addEventListener('input', spOnInput);
+    $('#tab-split').addEventListener('change', spOnChange);
+    spRenderAll();
     $$('[data-close]').forEach(function (b) { b.addEventListener('click', closeSheets); });
     $$('.backdrop').forEach(function (b) { b.addEventListener('click', function (e) { if (e.target === b) closeSheets(); }); });
 
