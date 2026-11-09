@@ -68,22 +68,30 @@ h4 { font-size: 13px; font-weight: 600; margin: 18px 0 8px; color: var(--muted);
 /* ---------- Summary ---------- */
 .saldo { font-size: 30px; font-weight: 700; letter-spacing: -.5px; margin: 4px 0 14px; }
 .saldo.neg { color: var(--red); }
-/* Bar bulan: font Poppins seragam, teks tepat di tengah (horizontal & vertikal), termasuk di iOS Safari */
-input.month {
-  -webkit-appearance: none; appearance: none; display: flex; align-items: center; justify-content: center;
-  width: 132px; height: 34px; min-height: 34px; margin: 0; padding: 0 10px; border: 0; border-radius: 12px;
-  background: var(--bg); color: var(--ink); text-align: center; text-align-last: center;
-  font-family: inherit; font-size: 12px; font-weight: 600; line-height: 34px;
+/* Tombol periode (membuka sheet pemilih rentang tanggal) */
+.period {
+  display: inline-flex; align-items: center; gap: 6px; flex: none; max-width: 100%; height: 34px; padding: 0 12px;
+  border: 0; border-radius: 12px; background: var(--bg); color: var(--ink); cursor: pointer;
+  font: inherit; font-size: 12px; font-weight: 600; white-space: nowrap; transition: background-color .15s ease, transform .12s ease;
 }
-input.month::-webkit-datetime-edit { padding: 0; width: auto; text-align: center; font-family: inherit; font-size: 12px; font-weight: 600; line-height: 34px; }
-input.month::-webkit-datetime-edit-fields-wrapper { padding: 0; display: flex; justify-content: center; align-items: center; }
-input.month::-webkit-datetime-edit-text,
-input.month::-webkit-datetime-edit-month-field,
-input.month::-webkit-datetime-edit-year-field { padding: 0 1px; font-family: inherit; font-size: 12px; font-weight: 600; color: var(--ink); }
-/* Indikator kalender dibuat transparan dan menutupi seluruh kotak, agar di PC klik di mana saja membuka pemilih bulan */
-input.month { position: relative; cursor: pointer; }
-input.month::-webkit-calendar-picker-indicator { display: block; position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0; opacity: 0; cursor: pointer; }
-input.month::-webkit-date-and-time-value { text-align: center; margin: 0; min-height: 0; }
+.period:active { transform: scale(.97); }
+.period .ico { width: 14px; height: 14px; color: var(--purple); }
+.period-label { overflow: hidden; text-overflow: ellipsis; }
+.presets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.preset {
+  border: 0; background: var(--bg); color: var(--muted); font: inherit; font-size: 12px; font-weight: 600;
+  padding: 12px 4px; border-radius: 12px; cursor: pointer; transition: background-color .15s ease, color .15s ease;
+}
+.preset.active { background: var(--purple-s); color: var(--purple); }
+.pager { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 14px; }
+.pager span { flex: 1; min-width: 0; text-align: center; font-size: 11px; color: var(--muted); }
+.pager .btn { flex: none; }
+.pager .btn:disabled { opacity: .4; cursor: default; }
+@media (hover: hover) {
+  .period:hover { background: #E6EBF3; }
+  .preset:not(.active):hover { background: #E6EBF3; color: var(--ink); }
+  .preset.active:hover { background: #DDD8FF; }
+}
 .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .tile { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 16px; min-width: 0; }
 .tile small { display: block; font-size: 11px; color: var(--muted); }

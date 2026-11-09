@@ -11,7 +11,7 @@
   var IC_DEL ='<svg class="ico" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6"/><path d="M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
   var nf = new Intl.NumberFormat('id-ID');
   var editTrxId = null, editBillId = null, editDepId = null;
-  var state = { token: null, user: null, kasList: [], kasId: null, config: null, month: ym(new Date()), dash: null, chart: null, mode: 'login' };
+  var state = { token: null, user: null, kasList: [], kasId: null, config: null, preset: 'month', dari: '', sampai: '', halaman: 1, dash: null, chart: null, mode: 'login' };
   var busyCount = 0, toastTimer = null;
 
   /* ---------- Helper ---------- */
@@ -119,13 +119,83 @@
     });
   }
 
+  function isoDate(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+
+  /** Preset dihitung ulang tiap muat data agar tetap benar bila aplikasi dibiarkan terbuka berhari-hari. */
+  function applyPreset(p) {
+    var now = new Date(), a = '', b = '';
+    if (p === 'month') {
+      a = ym(now) + '-01';
+      b = isoDate(new Date(now.getFullYear(), now.getMonth() + 1, 0));
+    } else if (p === 'week') { // Senin - Minggu
+      var dow = (now.getDay() + 6) % 7;
+      var s = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dow);
+      a = isoDate(s);
+      b = isoDate(new Date(s.getFullYear(), s.getMonth(), s.getDate() + 6));
+    }
+    state.dari = a; state.sampai = b;
+  }
+
+  /** Ambil data dashboard untuk periode & halaman yang sedang aktif. */
+  function fetchDash() {
+    if (state.preset !== 'custom') applyPreset(state.preset);
+    return call('apiGetDashboard', state.token, state.kasId, state.dari, state.sampai, state.halaman).then(function (d) {
+      state.halaman = d.halaman;
+      return d;
+    });
+  }
+
   function refresh() {
     if (!state.kasId) return Promise.resolve();
     store(LS_KAS, state.kasId);
-    return call('apiGetDashboard', state.token, state.kasId, state.month).then(function (d) {
+    return fetchDash().then(function (d) {
       state.dash = d; render();
     }).catch(function (err) { toast(err.message); });
   }
+
+  /* ---------- Periode (rentang tanggal) ---------- */
+  function periodLabel() {
+    if (state.preset === 'month') return 'Bulan ini';
+    if (state.preset === 'week') return 'Minggu ini';
+    if (state.preset === 'all' || (!state.dari && !state.sampai)) return 'Semua waktu';
+    if (state.dari && state.sampai) {
+      if (state.dari === state.sampai) return longDate(state.dari);
+      var a = state.dari.split('-'), b = state.sampai.split('-');
+      return a[0] === b[0] ? shortDate(state.dari) + ' – ' + shortDate(state.sampai) + ' ' + b[0] : shortDate(state.dari) + ' ' + a[0] + ' – ' + shortDate(state.sampai) + ' ' + b[0];
+    }
+    return state.dari ? 'Sejak ' + longDate(state.dari) : 'Hingga ' + longDate(state.sampai);
+  }
+
+  function renderPeriod() {
+    var t = periodLabel();
+    $$('.period-label').forEach(function (el) { el.textContent = t; });
+  }
+
+  function openPeriod() {
+    $('#pDari').value = state.dari; $('#pSampai').value = state.sampai;
+    $$('.preset').forEach(function (b) { b.classList.toggle('active', b.dataset.preset === state.preset); });
+    setErr('#periodErr', '');
+    openSheet('#sheetPeriod');
+  }
+
+  function setPreset(p) {
+    state.preset = p; state.halaman = 1;
+    if (p === 'all') { state.dari = ''; state.sampai = ''; }
+    closeSheets();
+    refresh();
+  }
+
+  function onPeriodSubmit(e) {
+    e.preventDefault();
+    var a = $('#pDari').value, b = $('#pSampai').value;
+    if (!a && !b) { setPreset('all'); return; }
+    if (a && b && a > b) { setErr('#periodErr', 'Tanggal "Dari" tidak boleh setelah "Sampai".'); return; }
+    state.preset = 'custom'; state.dari = a; state.sampai = b; state.halaman = 1;
+    closeSheets();
+    refresh();
+  }
+
+  function gotoPage(n) { state.halaman = n; refresh(); }
 
   /* ---------- Render ---------- */
   function currentKas() { return state.kasList.filter(function (k) { return k.id === state.kasId; })[0] || {}; }
@@ -137,7 +207,7 @@
     $('#avatar').textContent = first.charAt(0).toUpperCase();
     $('#kasName').textContent = currentKas().nama || '-';
     $('#roleBadge').textContent = d.role;
-    $$('.month').forEach(function (m) { m.value = d.month; });
+    renderPeriod();
 
     var saldo = $('#saldo');
     saldo.textContent = rp(d.balance);
@@ -186,7 +256,11 @@
 
   function renderRecent(d, isAdmin) {
     var ul = $('#recent');
-    if (!d.recent.length) { ul.innerHTML = '<li class="empty-list">Belum ada transaksi di bulan ini.</li>'; return; }
+    show($('#pager'), d.totalHalaman > 1);
+    $('#pagerInfo').textContent = 'Halaman ' + d.halaman + ' dari ' + d.totalHalaman + ' · ' + d.totalTrx + ' transaksi';
+    $('#pagePrev').disabled = d.halaman <= 1;
+    $('#pageNext').disabled = d.halaman >= d.totalHalaman;
+    if (!d.recent.length) { ul.innerHTML = '<li class="empty-list">Belum ada transaksi di periode ini.</li>'; return; }
     ul.innerHTML = d.recent.map(function (t) {
       var sign = t.jenis === 'Pemasukan' ? '+' : t.jenis === 'Pengeluaran' ? '−' : '';
       var r = t.rincian;
@@ -716,7 +790,7 @@
 
   /** Muat ulang dashboard lalu segarkan daftar Kelola + pilihan form. */
   function reloadSettings() {
-    return call('apiGetDashboard', state.token, state.kasId, state.month).then(function (d) {
+    return fetchDash().then(function (d) {
       state.dash = d; render(); renderSettings();
     });
   }
@@ -924,8 +998,13 @@
     req.then(function () {
       closeSheets();
       toast(editTrxId ? 'Transaksi diperbarui ✓' : 'Transaksi tersimpan ✓');
-      var m = payload.tanggal.slice(0, 7);
-      if (m !== state.month) state.month = m; // lompat ke bulan transaksi agar langsung terlihat
+      var tg = payload.tanggal; // jika di luar periode aktif, lompat ke bulan transaksi agar langsung terlihat
+      if ((state.dari && tg < state.dari) || (state.sampai && tg > state.sampai)) {
+        state.preset = 'custom';
+        state.dari = tg.slice(0, 7) + '-01';
+        state.sampai = isoDate(new Date(Number(tg.slice(0, 4)), Number(tg.slice(5, 7)), 0));
+      }
+      if (!editTrxId) state.halaman = 1; // transaksi baru muncul di halaman pertama
       return refresh();
     }).catch(function (err) { setErr('#trxErr', err.message); })
       .then(function () { $('#trxBtn').disabled = false; });
@@ -945,7 +1024,7 @@
     setErr('#collabErr', '');
     call('apiAddCollaborator', state.token, state.kasId, $('#cEmail').value, $('#cRole').value).then(function (r) {
       toast(r.nama + ' ditambahkan sebagai ' + r.role);
-      return call('apiGetDashboard', state.token, state.kasId, state.month);
+      return fetchDash();
     }).then(function (d) { state.dash = d; openCollab(); })
       .catch(function (err) { setErr('#collabErr', err.message); });
   }
@@ -1031,11 +1110,12 @@
     $('#cPokok').addEventListener('input', onNominalInput);
     $('#cBaru').addEventListener('change', function (e) { show($('#cBaruWrap'), e.target.value === 'ya'); });
     $('#cairForm').addEventListener('submit', onCairSubmit);
-    $$('.month').forEach(function (m) {
-      m.addEventListener('change', function (e) { if (e.target.value) { state.month = e.target.value; refresh(); } });
-      // Di PC, klik pada kotak langsung membuka pemilih bulan (showPicker tidak ada di semua browser)
-      m.addEventListener('click', function () { try { if (m.showPicker) m.showPicker(); } catch (err) {} });
-    });
+    $('#periodBtn').addEventListener('click', openPeriod);
+    $('#periodBtn2').addEventListener('click', openPeriod);
+    $('#periodForm').addEventListener('submit', onPeriodSubmit);
+    $$('.preset').forEach(function (b) { b.addEventListener('click', function () { setPreset(b.dataset.preset); }); });
+    $('#pagePrev').addEventListener('click', function () { gotoPage(state.halaman - 1); });
+    $('#pageNext').addEventListener('click', function () { gotoPage(state.halaman + 1); });
     $$('[data-close]').forEach(function (b) { b.addEventListener('click', closeSheets); });
     $$('.backdrop').forEach(function (b) { b.addEventListener('click', function (e) { if (e.target === b) closeSheets(); }); });
 

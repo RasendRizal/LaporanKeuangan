@@ -3,7 +3,15 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Keuangan Keluarga</title>
+  <title>Finance App</title>
+  <link rel="icon" href="https://i.ibb.co.com/1fhDr2LW/Financial-app-logo-design-6b28715a-2-K.jpg">
+  <link rel="apple-touch-icon" href="https://i.ibb.co.com/1fhDr2LW/Financial-app-logo-design-6b28715a-2-K.jpg">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#14B8A6">
+  <meta name="application-name" content="Finance App">
+  <meta name="apple-mobile-web-app-title" content="Finance App">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -64,7 +72,7 @@
     <section class="card c-summary">
       <div class="row between">
         <p class="muted small">Saldo total</p>
-        <input id="monthPicker" class="month" type="month" aria-label="Pilih bulan">
+        <button id="periodBtn" class="period" type="button" aria-label="Pilih periode"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span class="period-label">Bulan ini</span><svg class="ico chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
       </div>
       <p id="saldo" class="saldo">Rp 0</p>
       <div class="tiles">
@@ -84,7 +92,7 @@
       <h3>Pengeluaran per Kategori</h3>
       <div class="chart-box">
         <div class="donut"><canvas id="donut"></canvas></div>
-        <p id="chartEmpty" class="empty hidden">Belum ada pengeluaran di bulan ini.</p>
+        <p id="chartEmpty" class="empty hidden">Belum ada pengeluaran di periode ini.</p>
       </div>
       <ul id="legend" class="legend"></ul>
     </section>
@@ -157,9 +165,14 @@
 
     <!-- Kartu 5: Transaksi bulan ini -->
     <section class="card c-recent">
-      <div class="row between"><h3>Transaksi Bulan Ini</h3><input id="monthPicker2" class="month" type="month" aria-label="Pilih bulan"></div>
+      <div class="row between"><h3>Transaksi</h3><button id="periodBtn2" class="period" type="button" aria-label="Pilih periode"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span class="period-label">Bulan ini</span><svg class="ico chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button></div>
       <button id="btnAddTrx2" class="btn btn-primary add-trx" type="button"><svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Tambah Transaksi</button>
       <ul id="recent" class="trx-list"></ul>
+      <div id="pager" class="pager hidden">
+        <button id="pagePrev" class="btn btn-soft sm" type="button">‹ Sebelumnya</button>
+        <span id="pagerInfo"></span>
+        <button id="pageNext" class="btn btn-soft sm" type="button">Berikutnya ›</button>
+      </div>
     </section>
   </main>
 
@@ -167,7 +180,7 @@
       <button type="button" class="tabbtn active" data-tab="home"><svg class="ico" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg>Beranda</button>
       <button type="button" class="tabbtn" data-tab="trx"><svg class="ico" viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>Transaksi</button>
       <button type="button" class="tabbtn" data-tab="bill"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Tagihan</button>
-      <button type="button" class="tabbtn" data-tab="dep"><svg class="ico" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Deposito</button>
+      <button type="button" class="tabbtn" data-tab="dep"><svg class="ico" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Kekayaan</button>
       <button type="button" class="tabbtn" data-tab="wallet"><svg class="ico" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12v4"/><rect x="3" y="7" width="18" height="13" rx="3"/><circle cx="16.5" cy="13.5" r="1"/></svg>Dompet</button>
     </nav>
   </div>
@@ -403,6 +416,28 @@
       </form>
       <p id="kasErr" class="error hidden"></p>
       <button id="btnLogout" class="btn btn-ghost" type="button">Keluar dari akun</button>
+    </div>
+  </div>
+
+  <!-- ================= SHEET: PERIODE ================= -->
+  <div id="sheetPeriod" class="backdrop hidden">
+    <div class="sheet" role="dialog" aria-label="Pilih periode">
+      <div class="grab"></div>
+      <div class="row between"><h3>Periode Data</h3><button class="x" type="button" data-close>✕</button></div>
+      <div class="presets">
+        <button type="button" class="preset" data-preset="week">Minggu ini</button>
+        <button type="button" class="preset" data-preset="month">Bulan ini</button>
+        <button type="button" class="preset" data-preset="all">Semua waktu</button>
+      </div>
+      <h4>Atau pilih rentang sendiri</h4>
+      <form id="periodForm">
+        <div class="grid2">
+          <label class="field">Dari tanggal<input id="pDari" type="date"></label>
+          <label class="field">Sampai tanggal<input id="pSampai" type="date"></label>
+        </div>
+        <p id="periodErr" class="error hidden"></p>
+        <button class="btn btn-primary" type="submit">Terapkan</button>
+      </form>
     </div>
   </div>
 

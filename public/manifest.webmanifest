@@ -1,0 +1,18 @@
+{
+  "name": "Finance App",
+  "short_name": "Finance App",
+  "description": "Catat keuangan keluarga bersama.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F7F9FC",
+  "theme_color": "#14B8A6",
+  "icons": [
+    {
+      "src": "https://i.ibb.co.com/1fhDr2LW/Financial-app-logo-design-6b28715a-2-K.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
+  ]
+}
