@@ -101,11 +101,11 @@
     <!-- Kartu 3: Visualisasi -->
     <section class="card c-chart">
       <h3>Pengeluaran per Kategori</h3>
-      <div class="chart-box">
-        <div class="donut"><canvas id="donut"></canvas></div>
-        <p id="chartEmpty" class="empty hidden">Belum ada pengeluaran di periode ini.</p>
+      <div id="chartRow" class="chart-row">
+        <div class="chart-box"><div class="donut"><canvas id="donut"></canvas></div></div>
+        <ul id="legend" class="legend"></ul>
       </div>
-      <ul id="legend" class="legend"></ul>
+      <p id="chartEmpty" class="empty hidden">Belum ada pengeluaran di periode ini.</p>
     </section>
 
     <!-- Kartu: Jatuh Tempo -->
@@ -155,6 +155,7 @@
         <h3>Laporan</h3>
         <div id="spReportBody"></div>
         <div class="sp-actions">
+          <button id="spShare" class="btn btn-primary" type="button"><svg class="ico" viewBox="0 0 24 24"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>Bagikan sebagai gambar (PNG)</button>
           <button id="spCopy" class="btn btn-soft" type="button">Salin laporan</button>
           <button id="spReset" class="btn btn-ghost" type="button">Reset</button>
         </div>

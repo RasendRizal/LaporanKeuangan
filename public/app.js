@@ -235,7 +235,7 @@
   function renderChart(d) {
     var has = d.byCategory.length > 0;
     show($('#chartEmpty'), !has);
-    $('#donut').style.visibility = has ? 'visible' : 'hidden';
+    show($('#chartRow'), has);
     if (state.chart) { state.chart.destroy(); state.chart = null; }
     $('#legend').innerHTML = '';
     if (!has) return;
@@ -255,7 +255,7 @@
     }
     $('#legend').innerHTML = d.byCategory.map(function (c, i) {
       var pct = d.expense ? Math.round((c.total / d.expense) * 100) : 0;
-      return '<li><i style="background:' + COLORS[i % COLORS.length] + '"></i><span>' + esc(c.kategori) + '</span><b>' + rp(c.total) + '</b><em>' + pct + '%</em></li>';
+      return '<li><i style="background:' + COLORS[i % COLORS.length] + '"></i><div class="lg-main"><span>' + esc(c.kategori) + '</span><b>' + rp(c.total) + '</b></div><em>' + pct + '%</em></li>';
     }).join('');
   }
 
@@ -284,16 +284,17 @@
 
   /** Isi panel detail di daftar transaksi: barang, diskon, pajak, total. */
   function rincDetail(r) {
-    var sub = 0;
+    var sub = 0, hemat = 0;
     var h = r.items.map(function (it) {
       var line = Math.round(it.harga * it.qty) - it.diskon;
-      sub += line;
+      sub += line; hemat += it.diskon;
       return '<div><span class="l">' + esc(it.nama) + '<small>' + fmtQty(it.qty) + ' × ' + rp(it.harga) + (it.diskon ? ' − diskon ' + rp(it.diskon) : '') + '</small></span><span class="r">' + rp(line) + '</span></div>';
     }).join('');
     if (r.pajak && r.pajak.nominal > 0) {
       h += '<div><span class="l">PPN' + (r.pajak.termasuk ? ' (sudah termasuk)' : '') + '</span><span class="r">' + (r.pajak.termasuk ? '' : '+') + rp(r.pajak.nominal) + '</span></div>';
       if (!r.pajak.termasuk) sub += r.pajak.nominal;
     }
+    if (hemat > 0) h += '<div class="hemat"><span class="l">Total hemat (diskon)</span><span class="r">−' + rp(hemat) + '</span></div>';
     return h + '<div class="tot"><span class="l">Total</span><span class="r">' + rp(sub) + '</span></div>';
   }
 
@@ -1079,8 +1080,7 @@
   function spAllIds() { return sp.people.map(function (p) { return p.id; }); }
   function spName(id) { return (spFind(sp.people, id) || {}).nama || '-'; }
   function spWho(it) {
-    var all = spAllIds();
-    return it.who === null ? all : all.filter(function (id) { return it.who.indexOf(id) >= 0; });
+    return spAllIds().filter(function (id) { return it.who.indexOf(id) >= 0; });
   }
   function spSigned(n) { return (n < 0 ? '−' : '+') + rp(Math.abs(n)); }
 
@@ -1154,9 +1154,9 @@
 
   function spItemHtml(it) {
     var all = spAllIds();
-    var isAll = all.length > 0 && (it.who === null || all.every(function (id) { return it.who.indexOf(id) >= 0; }));
+    var isAll = all.length > 0 && all.every(function (id) { return it.who.indexOf(id) >= 0; });
     var chips = all.length ? '<button type="button" class="sp-chip' + (isAll ? ' on' : '') + '" data-who="all">Semua</button>' + sp.people.map(function (p) {
-      var on = it.who === null || it.who.indexOf(p.id) >= 0;
+      var on = it.who.indexOf(p.id) >= 0;
       return '<button type="button" class="sp-chip' + (on ? ' on' : '') + '" data-who="' + p.id + '">' + esc(p.nama) + '</button>';
     }).join('') : '<span class="sp-empty">Tambahkan orang dulu</span>';
     var line = Math.round(it.qty * it.harga);
@@ -1256,14 +1256,14 @@
 
   function spRemovePerson(id) {
     sp.people = sp.people.filter(function (p) { return p.id !== id; });
-    sp.items.forEach(function (it) { if (it.who !== null) it.who = it.who.filter(function (w) { return w !== id; }); });
+    sp.items.forEach(function (it) { it.who = it.who.filter(function (w) { return w !== id; }); });
     if (sp.payer === id) sp.payer = '';
     spRenderPeople(); spRenderItems(); spRenderReport();
   }
 
   function spAddItem() {
     if (sp.items.length >= 100) { toast('Maksimal 100 item'); return; }
-    sp.items.push({ id: spId(), nama: '', qty: 1, harga: 0, who: null });
+    sp.items.push({ id: spId(), nama: '', qty: 1, harga: 0, who: [] });
     spRenderItems(); spRenderReport();
     var last = $('#spItems').lastElementChild;
     if (last) last.querySelector('.i-nama').focus();
@@ -1280,11 +1280,13 @@
 
   function spToggleWho(it, pid) {
     var all = spAllIds();
-    if (pid === 'all') { it.who = null; return; }
-    var cur = it.who === null ? all.slice() : it.who.filter(function (id) { return all.indexOf(id) >= 0; });
-    var i = cur.indexOf(pid);
-    if (i >= 0) cur.splice(i, 1); else cur.push(pid);
-    it.who = cur.length === all.length ? null : cur; // semua terpilih = ikut otomatis orang yang ditambahkan kemudian
+    if (pid === 'all') { // "Semua": pilih semua orang, atau kosongkan bila semua sudah terpilih
+      var full = all.length > 0 && all.every(function (id) { return it.who.indexOf(id) >= 0; });
+      it.who = full ? [] : all.slice();
+      return;
+    }
+    var i = it.who.indexOf(pid);
+    if (i >= 0) it.who.splice(i, 1); else it.who.push(pid);
   }
 
   function spOnClick(e) {
@@ -1389,6 +1391,160 @@
     else fallback();
   }
 
+  /* --- Ekspor laporan sebagai gambar PNG (digambar langsung di canvas) --- */
+  /** Menggambar laporan; mengembalikan tinggi total. Dipanggil dua kali: sekali untuk mengukur, sekali untuk menggambar. */
+  function spPaint(ctx, W, c) {
+    var P = 36, CW = W - 2 * P, FONT = "'Poppins', -apple-system, 'Segoe UI', sans-serif", y = 0;
+    var INK = '#1F2A44', MUTED = '#7A869A', LINE = '#E8EDF5', GREEN = '#0E9A58', RED = '#E5522F';
+    function font(w, s) { ctx.font = w + ' ' + s + 'px ' + FONT; }
+    function fit(t, max) {
+      t = String(t);
+      if (ctx.measureText(t).width <= max) return t;
+      while (t.length > 1 && ctx.measureText(t + '…').width > max) t = t.slice(0, -1);
+      return t + '…';
+    }
+    function box(x, yy, w, h, fill, stroke, r) {
+      r = r || 16;
+      ctx.beginPath();
+      ctx.moveTo(x + r, yy);
+      ctx.arcTo(x + w, yy, x + w, yy + h, r);
+      ctx.arcTo(x + w, yy + h, x, yy + h, r);
+      ctx.arcTo(x, yy + h, x, yy, r);
+      ctx.arcTo(x, yy, x + w, yy, r);
+      ctx.closePath();
+      ctx.fillStyle = fill; ctx.fill();
+      if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1.5; ctx.stroke(); }
+    }
+    function row(l, r, yy, x0, x1, wt, sz, lc, rc) {
+      font(wt, sz); ctx.textBaseline = 'middle';
+      ctx.textAlign = 'right'; ctx.fillStyle = rc; ctx.fillText(r, x1, yy);
+      var rw = ctx.measureText(r).width;
+      ctx.textAlign = 'left'; ctx.fillStyle = lc; ctx.fillText(fit(l, x1 - x0 - rw - 14), x0, yy);
+    }
+
+    // Header
+    var g = ctx.createLinearGradient(0, 0, W, 130);
+    g.addColorStop(0, '#14B8A6'); g.addColorStop(1, '#8B7CF6');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, 130);
+    ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+    ctx.fillStyle = 'rgba(255,255,255,.85)'; font('600', 13); ctx.fillText('SPLIT BILL', P, 42);
+    ctx.fillStyle = '#fff'; font('700', 26); ctx.fillText(fit(sp.title.trim() || 'Laporan Tagihan', CW), P, 80);
+    ctx.fillStyle = 'rgba(255,255,255,.85)'; font('400', 13); ctx.fillText(longDate(today()), P, 106);
+    y = 154;
+
+    // Ringkasan
+    var n = 1 + c.extras.length, sh = 30 * n + 71, x0 = P + 20, x1 = P + CW - 20;
+    box(P, y, CW, sh, '#fff');
+    var ry = y + 35;
+    row('Subtotal item', rp(c.subAll), ry, x0, x1, '400', 14, INK, INK);
+    c.extras.forEach(function (x) {
+      ry += 30;
+      row(x.nama + (x.bagi === 'prop' ? ' · proporsional' : ' · dibagi rata'), spSigned(x.amt), ry, x0, x1, '400', 14, MUTED, x.amt < 0 ? GREEN : INK);
+    });
+    ctx.strokeStyle = LINE; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x0, ry + 22); ctx.lineTo(x1, ry + 22); ctx.stroke();
+    row('Total tagihan', rp(c.total), ry + 44, x0, x1, '700', 17, INK, INK);
+    y += sh + 28;
+
+    // Per orang
+    ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left'; ctx.fillStyle = MUTED; font('700', 15);
+    ctx.fillText('Per orang', P, y);
+    y += 14;
+    sp.people.forEach(function (p) {
+      var d = c.per[p.id], nl = Math.max(1, d.lines.length) + d.extraLines.length, ch = 66 + nl * 24;
+      box(P, y, CW, ch, '#fff', LINE);
+      var hy = y + 30, isPayer = sp.payer === p.id;
+      var tot = rp(d.total);
+      font('700', 17); ctx.textBaseline = 'middle'; ctx.textAlign = 'right'; ctx.fillStyle = d.total < 0 ? RED : INK; ctx.fillText(tot, x1, hy);
+      var tw = ctx.measureText(tot).width;
+      font('600', 17); ctx.textAlign = 'left'; ctx.fillStyle = INK;
+      var nm = fit(p.nama, x1 - x0 - tw - 16 - (isPayer ? 80 : 0));
+      ctx.fillText(nm, x0, hy);
+      if (isPayer) {
+        var bx = x0 + ctx.measureText(nm).width + 10;
+        box(bx, hy - 11, 70, 22, '#E6FAF0', null, 11);
+        font('600', 11); ctx.fillStyle = GREEN; ctx.textAlign = 'center'; ctx.fillText('Pembayar', bx + 35, hy);
+      }
+      ctx.strokeStyle = LINE; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x0, y + 48); ctx.lineTo(x1, y + 48); ctx.stroke();
+      var ly = y + 68;
+      if (!d.lines.length) { row('Tidak ada item', '', ly, x0, x1, '400', 12, MUTED, INK); ly += 24; }
+      d.lines.forEach(function (l) {
+        row(l.nama + ' · ' + fmtQty(l.qty) + ' × ' + rp(l.harga) + (l.n > 1 ? ' ÷ ' + l.n : ''), rp(l.bagian), ly, x0, x1, '400', 12, MUTED, INK);
+        ly += 24;
+      });
+      d.extraLines.forEach(function (l) {
+        row(l.nama, spSigned(l.bagian), ly, x0, x1, '400', 12, MUTED, l.bagian < 0 ? GREEN : INK);
+        ly += 24;
+      });
+      y += ch + 12;
+    });
+
+    // Pelunasan
+    if (sp.payer && spFind(sp.people, sp.payer)) {
+      var debtors = sp.people.filter(function (p) { return p.id !== sp.payer && c.per[p.id].total > 0; });
+      y += 16;
+      ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left'; ctx.fillStyle = MUTED; font('700', 15);
+      ctx.fillText(fit('Pelunasan ke ' + spName(sp.payer), CW), P, y);
+      y += 14;
+      var ph = 30 * Math.max(1, debtors.length) + 30;
+      box(P, y, CW, ph, '#EFEDFF');
+      if (!debtors.length) row('Tidak ada yang perlu mentransfer.', '', y + 30, x0, x1, '400', 13, INK, INK);
+      debtors.forEach(function (p, i) { row(p.nama, rp(c.per[p.id].total), y + 30 + 30 * i, x0, x1, '600', 14, INK, INK); });
+      y += ph;
+    }
+
+    // Footer
+    y += 36;
+    ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'center'; ctx.fillStyle = MUTED; font('400', 11);
+    ctx.fillText('Dibuat dengan Finance App', W / 2, y);
+    return y + 30;
+  }
+
+  function spBuildCanvas() {
+    var c = spCompute(), W = 720, S = 2;
+    var h = spPaint(document.createElement('canvas').getContext('2d'), W, c);
+    if (W * S * h * S > 14000000) S = 1; // batas ukuran canvas di HP
+    var cv = document.createElement('canvas');
+    cv.width = W * S; cv.height = Math.ceil(h * S);
+    var ctx = cv.getContext('2d');
+    ctx.scale(S, S);
+    ctx.fillStyle = '#F7F9FC'; ctx.fillRect(0, 0, W, h);
+    spPaint(ctx, W, c);
+    return cv;
+  }
+
+  function spDownload(blob, name) {
+    var url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+    toast('Gambar laporan diunduh ✓');
+  }
+
+  function spShare() {
+    if (!spReportData().has) { toast('Belum ada data untuk dibagikan'); return; }
+    var btn = $('#spShare');
+    btn.disabled = true;
+    var fonts = document.fonts && document.fonts.load
+      ? Promise.all(['400', '600', '700'].map(function (w) { return document.fonts.load(w + ' 14px Poppins'); })).catch(function () {})
+      : Promise.resolve();
+    fonts.then(function () {
+      var cv = spBuildCanvas();
+      return new Promise(function (res) { cv.toBlob(res, 'image/png'); });
+    }).then(function (blob) {
+      if (!blob) throw new Error('Gagal membuat gambar.');
+      var name = 'split-bill-' + today() + '.png';
+      var file = new File([blob], name, { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        return navigator.share({ files: [file], title: sp.title.trim() || 'Split Bill' }).catch(function (err) {
+          if (err && err.name === 'AbortError') return; // pengguna menutup menu bagikan
+          spDownload(blob, name);
+        });
+      }
+      spDownload(blob, name);
+    }).catch(function (err) { toast(err.message || 'Gagal membagikan'); })
+      .then(function () { btn.disabled = false; });
+  }
+
   function spReset() {
     var btn = $('#spReset');
     if (!btn.classList.contains('confirm')) { // konfirmasi dua langkah
@@ -1471,6 +1627,7 @@
     $('#splitBack').addEventListener('click', function () { setTab('home'); });
     $('#spPersonForm').addEventListener('submit', spAddPerson);
     $('#spAddItem').addEventListener('click', spAddItem);
+    $('#spShare').addEventListener('click', spShare);
     $('#spCopy').addEventListener('click', spCopy);
     $('#spReset').addEventListener('click', spReset);
     $('#tab-split').addEventListener('click', spOnClick);
