@@ -87,6 +87,17 @@
       </div>
     </section>
 
+    <!-- Submenu (5 slot): Tagihan aktif, sisanya disiapkan untuk pengembangan berikutnya -->
+    <section class="card c-menu">
+      <div class="submenu">
+        <button type="button" class="sub-item" data-go="bill"><span class="sub-ico"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span><span class="sub-name">Tagihan</span></button>
+        <button type="button" class="sub-item soon" disabled aria-disabled="true"><span class="sub-ico"><svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span class="sub-name">Segera</span></button>
+        <button type="button" class="sub-item soon" disabled aria-disabled="true"><span class="sub-ico"><svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span class="sub-name">Segera</span></button>
+        <button type="button" class="sub-item soon" disabled aria-disabled="true"><span class="sub-ico"><svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span class="sub-name">Segera</span></button>
+        <button type="button" class="sub-item soon" disabled aria-disabled="true"><span class="sub-ico"><svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span class="sub-name">Segera</span></button>
+      </div>
+    </section>
+
     <!-- Kartu 3: Visualisasi -->
     <section class="card c-chart">
       <h3>Pengeluaran per Kategori</h3>
@@ -115,19 +126,20 @@
 
     </main>
 
-    <!-- Tab Dompet -->
-    <main id="tab-wallet" class="bento tab-pane hidden">
-      <section class="card c-wallets">
-        <p class="muted small">Total saldo semua dompet</p>
-        <p id="walletTotal" class="saldo">Rp 0</p>
-        <p class="muted small">Dana terblokir di deposito (tidak termasuk saldo ini): <b id="walletBlocked">Rp 0</b></p>
-        <h3>Saldo per Dompet</h3>
-        <ul id="walletList" class="wallet-list"></ul>
-        <p id="walletHint" class="muted small">Ketuk sebuah dompet untuk mengatur saldo awal.</p>
-      </section>
+    <!-- Tab Pengaturan -->
+    <main id="tab-settings" class="bento tab-pane hidden">
       <section id="setCard" class="card c-wallets hidden">
-        <div class="row between"><h3>Pengaturan</h3><button id="btnSettings" class="btn btn-soft sm" type="button">Kelola</button></div>
-        <p class="muted small">Sesuaikan daftar dompet, kategori pengeluaran, dan kategori pemasukan untuk buku kas ini.</p>
+        <h3>Pengaturan</h3>
+        <p class="muted small">Sesuaikan daftar untuk buku kas ini.</p>
+        <ul id="setMenu" class="set-menu">
+          <li><button type="button" class="set-link" data-set="dompet"><span class="set-link-text"><b>Pengaturan Dompet</b><small id="cntDompet"></small></span><svg class="ico chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button></li>
+          <li><button type="button" class="set-link" data-set="out"><span class="set-link-text"><b>Pengaturan Kategori Pengeluaran</b><small id="cntOut"></small></span><svg class="ico chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button></li>
+          <li><button type="button" class="set-link" data-set="inn"><span class="set-link-text"><b>Pengaturan Kategori Pemasukan</b><small id="cntIn"></small></span><svg class="ico chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button></li>
+        </ul>
+      </section>
+      <section id="setNote" class="card c-wallets hidden">
+        <h3>Pengaturan</h3>
+        <p class="muted small">Hanya Admin yang dapat mengubah pengaturan buku kas ini.</p>
       </section>
     </main>
 
@@ -146,6 +158,13 @@
 
     <!-- Tab Deposito -->
     <main id="tab-dep" class="bento tab-pane hidden">
+      <section class="card c-wallets">
+        <p class="muted small">Total saldo semua dompet</p>
+        <p id="walletTotal" class="saldo">Rp 0</p>
+        <h3>Saldo per Dompet</h3>
+        <ul id="walletList" class="wallet-list"></ul>
+        <p id="walletHint" class="muted small">Ketuk sebuah dompet untuk mengatur saldo awal.</p>
+      </section>
       <section class="card c-bills">
         <div class="row between"><h3>Dana Terblokir (Deposito)</h3><button id="btnAddDep" class="btn btn-soft sm" type="button">+ Tambah</button></div>
         <p id="depTotal" class="saldo">Rp 0</p>
@@ -179,9 +198,8 @@
   <nav class="tabbar">
       <button type="button" class="tabbtn active" data-tab="home"><svg class="ico" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg>Beranda</button>
       <button type="button" class="tabbtn" data-tab="trx"><svg class="ico" viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>Transaksi</button>
-      <button type="button" class="tabbtn" data-tab="bill"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Tagihan</button>
       <button type="button" class="tabbtn" data-tab="dep"><svg class="ico" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Kekayaan</button>
-      <button type="button" class="tabbtn" data-tab="wallet"><svg class="ico" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12v4"/><rect x="3" y="7" width="18" height="13" rx="3"/><circle cx="16.5" cy="13.5" r="1"/></svg>Dompet</button>
+      <button type="button" class="tabbtn" data-tab="settings"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Pengaturan</button>
     </nav>
   </div>
 
@@ -370,12 +388,7 @@
   <div id="sheetSet" class="backdrop hidden">
     <div class="sheet" role="dialog" aria-label="Kelola dompet dan kategori">
       <div class="grab"></div>
-      <div class="row between"><h3>Kelola Dompet &amp; Kategori</h3><button class="x" type="button" data-close>✕</button></div>
-      <div class="tabs set-tabs three" role="tablist">
-        <button type="button" class="tab set-tab active" data-set="dompet">Dompet</button>
-        <button type="button" class="tab set-tab" data-set="out">Pengeluaran</button>
-        <button type="button" class="tab set-tab" data-set="inn">Pemasukan</button>
-      </div>
+      <div class="row between"><h3 id="setTitle">Pengaturan</h3><button class="x" type="button" data-close>✕</button></div>
       <ul id="setList" class="set-list"></ul>
       <form id="setForm" class="row gap">
         <input id="setNew" type="text" maxlength="30" placeholder="Tambah baru" required>

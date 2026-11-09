@@ -225,6 +225,11 @@
     renderDeposito(d, isAdmin);
     refreshOptions();
     show($('#setCard'), isAdmin);
+    show($('#setNote'), !isAdmin);
+    [['#cntDompet', 'dompet'], ['#cntOut', 'kategoriOut'], ['#cntIn', 'kategoriIn']].forEach(function (p) {
+      var list = d.settings[p[1]];
+      $(p[0]).textContent = list.length + ' item' + (list.some(function (x) { return x.sembunyi; }) ? ' · ' + list.filter(function (x) { return x.sembunyi; }).length + ' disembunyikan' : '');
+    });
   }
 
   function renderChart(d) {
@@ -318,8 +323,9 @@
 
   /* ---------- Tab & Dompet ---------- */
   function setTab(name) {
-    ['home', 'trx', 'bill', 'dep', 'wallet'].forEach(function (t) { show($('#tab-' + t), t === name); });
-    $$('.tabbtn').forEach(function (b) { b.classList.toggle('active', b.dataset.tab === name); });
+    ['home', 'trx', 'bill', 'dep', 'settings'].forEach(function (t) { show($('#tab-' + t), t === name); });
+    var nav = name === 'bill' ? 'home' : name; // Tagihan dibuka dari submenu Beranda
+    $$('.tabbtn').forEach(function (b) { b.classList.toggle('active', b.dataset.tab === nav); });
     window.scrollTo(0, 0);
   }
 
@@ -328,7 +334,6 @@
     total.textContent = rp(d.balance);
     total.classList.toggle('neg', d.balance < 0);
     show($('#walletHint'), isAdmin);
-    $('#walletBlocked').textContent = rp(d.deposito.ringkas.terblokir);
     $('#walletList').innerHTML = d.wallets.map(function (w) {
       return '<li class="wallet-item' + (isAdmin ? ' tap' : '') + '" data-d="' + esc(w.dompet) + '" data-awal="' + w.saldoAwal + '">' +
         '<div><b>' + esc(w.dompet) + '</b><small>Saldo awal ' + rp(w.saldoAwal) + '</small></div>' +
@@ -759,11 +764,16 @@
 
   /* ---------- Pengaturan dompet & kategori (per buku kas) ---------- */
   var setKey = 'dompet'; // tab aktif di sheet Kelola (bukan navigasi tab bawah)
-  var SET_TABS = { dompet: { tipe: 'Dompet', key: 'dompet', label: 'dompet' }, out: { tipe: 'Kategori Pengeluaran', key: 'kategoriOut', label: 'kategori pengeluaran' }, inn: { tipe: 'Kategori Pemasukan', key: 'kategoriIn', label: 'kategori pemasukan' } };
+  var SET_TABS = {
+    dompet: { tipe: 'Dompet', key: 'dompet', label: 'dompet', title: 'Pengaturan Dompet' },
+    out: { tipe: 'Kategori Pengeluaran', key: 'kategoriOut', label: 'kategori pengeluaran', title: 'Pengaturan Kategori Pengeluaran' },
+    inn: { tipe: 'Kategori Pemasukan', key: 'kategoriIn', label: 'kategori pemasukan', title: 'Pengaturan Kategori Pemasukan' }
+  };
   var IC_EYE = '<svg class="ico" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>';
   var IC_EYE_OFF = '<svg class="ico" viewBox="0 0 24 24"><path d="M3 3l18 18"/><path d="M10.6 6.2A10 10 0 0 1 12 6c6.4 0 10 6 10 6a17 17 0 0 1-3.2 3.9M6.6 7.7A17 17 0 0 0 2 12s3.6 7 10 7a10 10 0 0 0 4.3-1"/></svg>';
 
-  function openSettings() {
+  function openSettings(key) {
+    setKey = key;
     setErr('#setErr', '');
     $('#setNew').value = '';
     renderSettings();
@@ -771,8 +781,8 @@
   }
 
   function renderSettings() {
-    $$('.set-tab').forEach(function (b) { b.classList.toggle('active', b.dataset.set === setKey); });
     var cfg = SET_TABS[setKey], list = state.dash.settings[cfg.key];
+    $('#setTitle').textContent = cfg.title;
     $('#setNew').placeholder = 'Tambah ' + cfg.label + ' baru';
     $('#setList').innerHTML = list.map(function (x) {
       var note = x.terkunci ? 'bawaan' : x.sembunyi ? 'disembunyikan' : '';
@@ -796,8 +806,6 @@
   }
 
   function onSetClick(e) {
-    var tb = e.target.closest('.set-tab');
-    if (tb) { setKey = tb.dataset.set; setErr('#setErr', ''); renderSettings(); return; }
     var btn = e.target.closest('[data-sa]');
     if (!btn) return;
     var li = btn.closest('.set-item'), nama = li.dataset.n, tipe = SET_TABS[setKey].tipe;
@@ -1082,7 +1090,11 @@
     $('#recent').addEventListener('click', onRecentClick);
     $$('.tabbtn').forEach(function (b) { b.addEventListener('click', function () { setTab(b.dataset.tab); }); });
     $('#walletList').addEventListener('click', onWalletPick);
-    $('#btnSettings').addEventListener('click', openSettings);
+    $('#setMenu').addEventListener('click', function (e) {
+      var b = e.target.closest('[data-set]');
+      if (b) openSettings(b.dataset.set);
+    });
+    $$('.sub-item[data-go]').forEach(function (b) { b.addEventListener('click', function () { setTab(b.dataset.go); }); });
     $('#sheetSet').addEventListener('click', onSetClick);
     $('#setForm').addEventListener('submit', onSetAdd);
     $('#walletForm').addEventListener('submit', onWalletSubmit);
