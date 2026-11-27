@@ -26,7 +26,7 @@
       <h1>Keuangan Keluarga</h1>
       <p class="muted">Catat bersama, lihat jelas.</p>
 
-      <div class="tabs" role="tablist">
+      <div id="authTabs" class="tabs" role="tablist">
         <button type="button" class="tab active" data-mode="login">Masuk</button>
         <button type="button" class="tab" data-mode="signup">Daftar</button>
       </div>
@@ -35,14 +35,18 @@
         <label id="nameField" class="field hidden">Nama
           <input id="fNama" type="text" autocomplete="name" placeholder="Nama lengkap">
         </label>
-        <label class="field">Email
+        <label id="emailField" class="field">Email
           <input id="fEmail" type="email" autocomplete="email" inputmode="email" placeholder="nama@email.com" required>
         </label>
-        <label class="field">PIN / Password
+        <label id="pinField" class="field"><span id="pinLabel">PIN / Password</span>
           <input id="fPin" type="password" autocomplete="current-password" placeholder="Minimal 4 karakter" required>
         </label>
+        <p id="authHint" class="muted small auth-hint hidden"></p>
         <p id="authErr" class="error hidden"></p>
+        <p id="authOk" class="ok hidden"></p>
         <button id="authBtn" class="btn btn-primary" type="submit">Masuk</button>
+        <button id="forgotBtn" class="link auth-link" type="button">Lupa PIN?</button>
+        <button id="backBtn" class="link auth-link hidden" type="button">‹ Kembali ke Masuk</button>
       </form>
     </section>
   </main>

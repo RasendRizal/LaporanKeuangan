@@ -72,19 +72,51 @@
   function closeSheets() { $$('.backdrop').forEach(function (b) { show(b, false); }); document.body.style.overflow = ''; }
 
   /* ---------- Auth ---------- */
+  var resetToken = null; // token dari tautan email reset (bagian #reset=... di URL)
+
+  /** Mode: login, signup, forgot (minta tautan lewat email), reset (pasang PIN baru dari tautan). */
   function setMode(mode) {
     state.mode = mode;
+    var gate = mode === 'login' || mode === 'signup';
     $$('.tab[data-mode]').forEach(function (t) { t.classList.toggle('active', t.dataset.mode === mode); });
+    show($('#authTabs'), gate);
     show($('#nameField'), mode === 'signup');
+    show($('#emailField'), mode !== 'reset');
+    show($('#pinField'), mode !== 'forgot');
+    show($('#forgotBtn'), mode === 'login');
+    show($('#backBtn'), !gate);
     $('#fNama').required = mode === 'signup';
-    $('#authBtn').textContent = mode === 'signup' ? 'Buat Akun' : 'Masuk';
-    $('#fPin').autocomplete = mode === 'signup' ? 'new-password' : 'current-password';
-    setErr('#authErr', '');
+    $('#fEmail').required = mode !== 'reset';
+    $('#fPin').required = mode !== 'forgot';
+    $('#authBtn').textContent = mode === 'signup' ? 'Buat Akun' : mode === 'forgot' ? 'Kirim Tautan Reset' : mode === 'reset' ? 'Simpan PIN Baru' : 'Masuk';
+    $('#pinLabel').textContent = mode === 'reset' ? 'PIN / Password baru' : 'PIN / Password';
+    $('#fPin').autocomplete = mode === 'login' ? 'current-password' : 'new-password';
+    var hint = mode === 'forgot' ? 'Masukkan email akun Anda. Kami akan mengirim tautan untuk membuat PIN baru. Tautan berlaku 30 menit.'
+      : mode === 'reset' ? 'Buat PIN / Password baru untuk akun Anda.' : '';
+    $('#authHint').textContent = hint; show($('#authHint'), !!hint);
+    setErr('#authErr', ''); setOk('');
   }
+
+  function setOk(msg) { var el = $('#authOk'); el.textContent = msg || ''; show(el, !!msg); }
 
   function onAuthSubmit(e) {
     e.preventDefault();
     setErr('#authErr', '');
+    setOk('');
+    if (state.mode === 'forgot') {
+      call('apiRequestReset', $('#fEmail').value).then(function () {
+        setOk('Jika email terdaftar, tautan reset sudah dikirim. Periksa kotak masuk dan folder spam.');
+      }).catch(function (err) { setErr('#authErr', err.message); });
+      return;
+    }
+    if (state.mode === 'reset') {
+      call('apiResetPin', resetToken, $('#fPin').value).then(function () {
+        resetToken = null; $('#fPin').value = '';
+        setMode('login');
+        setOk('PIN berhasil diubah. Silakan masuk dengan PIN baru.');
+      }).catch(function (err) { setErr('#authErr', err.message); });
+      return;
+    }
     var email = $('#fEmail').value, pin = $('#fPin').value;
     var p = state.mode === 'signup' ? call('apiSignUp', $('#fNama').value, email, pin) : call('apiLogin', email, pin);
     p.then(function (res) {
@@ -1637,6 +1669,18 @@
     $$('[data-close]').forEach(function (b) { b.addEventListener('click', closeSheets); });
     $$('.backdrop').forEach(function (b) { b.addEventListener('click', function (e) { if (e.target === b) closeSheets(); }); });
 
+    $('#forgotBtn').addEventListener('click', function () { setMode('forgot'); });
+    $('#backBtn').addEventListener('click', function () { resetToken = null; setMode('login'); });
+
+    var m = /^#reset=([\w-]+)$/.exec(location.hash || '');
+    if (m) { // dibuka dari tautan di email: tampilkan form PIN baru
+      resetToken = m[1];
+      try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+      state.token = null;
+      show($('#appView'), false); show($('#authView'), true);
+      setMode('reset');
+      return;
+    }
     state.token = load(LS_TOKEN);
     if (state.token) boot(); else show($('#authView'), true);
   }

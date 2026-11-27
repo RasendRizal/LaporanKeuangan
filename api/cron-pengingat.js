@@ -1,4 +1,5 @@
-import { kirimPengingat, APP } from '../lib/server.js';
+import { kirimPengingat } from '../lib/server.js';
+import { sendMail } from '../lib/mail.js';
 
 /** Dipanggil Vercel Cron (lihat vercel.json) tiap hari 00:00 UTC = 07:00 WIB. Butuh CRON_SECRET dan RESEND_API_KEY. */
 export default async function handler(req, res) {
@@ -12,15 +13,6 @@ export default async function handler(req, res) {
     res.status(200).json({ ok: true, skipped: 'RESEND_API_KEY belum diatur, pengingat email tidak dikirim.' });
     return;
   }
-  const from = process.env.RESEND_FROM || APP.TITLE + ' <onboarding@resend.dev>';
-  const sendMail = async (to, subject, text) => {
-    const r = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { Authorization: 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from, to: [to], subject, text })
-    });
-    if (!r.ok) throw new Error('Resend gagal (' + r.status + '): ' + (await r.text()));
-  };
   try {
     const sent = await kirimPengingat(sendMail);
     res.status(200).json({ ok: true, sent });
