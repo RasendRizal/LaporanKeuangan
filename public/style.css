@@ -177,6 +177,11 @@ textarea { resize: none; }
 .ok { color: #0E9A58; background: var(--green-s); border-radius: 10px; padding: 9px 12px; font-size: 12px; margin-bottom: 12px; line-height: 1.5; }
 .auth-link { display: block; width: 100%; margin-top: 14px; padding: 6px; text-align: center; }
 .auth-hint { margin-bottom: 12px; line-height: 1.5; }
+.pin-show { text-align: center; font-size: 34px; font-weight: 700; letter-spacing: 8px; padding: 16px 0; margin: 10px 0 14px; background: var(--purple-s); color: var(--purple); border-radius: 16px; user-select: all; }
+.members li { align-items: center; gap: 10px; }
+.members .m-main { min-width: 0; flex: 1; overflow-wrap: anywhere; }
+.members .m-act { display: flex; align-items: center; gap: 8px; flex: none; }
+.members .btn.sm { padding: 6px 10px; font-size: 11px; }
 .error { color: #E5522F; background: var(--red-s); border-radius: 10px; padding: 9px 12px; font-size: 12px; margin-bottom: 12px; }
 
 /* ---------- Auth ---------- */

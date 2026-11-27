@@ -1054,10 +1054,63 @@
   /* ---------- Kolaborator ---------- */
   function openCollab() {
     $('#collabForm').reset(); setErr('#collabErr', '');
+    var isAdmin = state.dash && state.dash.role === 'Admin';
     $('#members').innerHTML = (state.dash ? state.dash.members : []).map(function (m) {
-      return '<li><div>' + esc(m.nama) + '<small>' + esc(m.email) + '</small></div><span class="role">' + esc(m.role) + '</span></li>';
+      var canReset = isAdmin && !m.saya && !m.pemilik; // PIN sendiri lewat Ubah PIN; pemilik buku kas tidak bisa direset anggota lain
+      return '<li><div class="m-main">' + esc(m.nama) + (m.saya ? ' (Anda)' : '') + '<small>' + esc(m.email) + '</small></div>' +
+        '<span class="m-act"><span class="role">' + esc(m.role) + '</span>' +
+        (canReset ? '<button class="btn btn-soft sm" type="button" data-reset="' + esc(m.email) + '" data-nama="' + esc(m.nama) + '">Reset PIN</button>' : '') + '</span></li>';
     }).join('');
     openSheet('#sheetCollab');
+  }
+
+  /* ---------- Reset PIN anggota (Admin) & Ubah PIN saya ---------- */
+  var resetEmail = null;
+
+  function openResetPin(email, nama) {
+    resetEmail = email;
+    $('#resetInfo').innerHTML = '<b>' + esc(nama) + '</b><br>' + esc(email);
+    $('#resetAdminPin').value = '';
+    setErr('#resetErr', '');
+    show($('#resetForm'), true); show($('#resetResult'), false);
+    openSheet('#sheetResetPin');
+  }
+
+  function onResetSubmit(e) {
+    e.preventDefault();
+    setErr('#resetErr', '');
+    call('apiResetMemberPin', state.token, state.kasId, resetEmail, $('#resetAdminPin').value).then(function (r) {
+      $('#resetAdminPin').value = '';
+      $('#resetWho').textContent = r.nama;
+      $('#resetPinShow').textContent = r.pin;
+      show($('#resetForm'), false); show($('#resetResult'), true);
+    }).catch(function (err) { setErr('#resetErr', err.message); });
+  }
+
+  function onResetCopy() {
+    var pin = $('#resetPinShow').textContent;
+    var done = function () { toast('PIN disalin ✓'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(pin).then(done, function () { toast('Gagal menyalin, salin manual'); });
+    else toast('Salin manual dari layar');
+  }
+
+  function openChangePin() {
+    $('#changePinForm').reset(); setErr('#cpErr', '');
+    openSheet('#sheetChangePin');
+  }
+
+  function onChangePinSubmit(e) {
+    e.preventDefault();
+    setErr('#cpErr', '');
+    if ($('#cpNew').value !== $('#cpNew2').value) { setErr('#cpErr', 'PIN baru dan pengulangannya tidak sama.'); return; }
+    call('apiChangePin', state.token, $('#cpOld').value, $('#cpNew').value).then(function () {
+      closeSheets(); toast('PIN berhasil diubah ✓');
+    }).catch(function (err) { setErr('#cpErr', err.message); });
+  }
+
+  function onMembersClick(e) {
+    var b = e.target.closest('[data-reset]');
+    if (b) openResetPin(b.dataset.reset, b.dataset.nama);
   }
 
   function onCollabSubmit(e) {
@@ -1669,6 +1722,11 @@
     $$('[data-close]').forEach(function (b) { b.addEventListener('click', closeSheets); });
     $$('.backdrop').forEach(function (b) { b.addEventListener('click', function (e) { if (e.target === b) closeSheets(); }); });
 
+    $('#members').addEventListener('click', onMembersClick);
+    $('#resetForm').addEventListener('submit', onResetSubmit);
+    $('#resetCopy').addEventListener('click', onResetCopy);
+    $('#btnChangePin').addEventListener('click', openChangePin);
+    $('#changePinForm').addEventListener('submit', onChangePinSubmit);
     $('#forgotBtn').addEventListener('click', function () { setMode('forgot'); });
     $('#backBtn').addEventListener('click', function () { resetToken = null; setMode('login'); });
 

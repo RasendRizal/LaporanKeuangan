@@ -178,6 +178,12 @@
           <li><button type="button" class="set-link" data-collab><span class="set-link-text"><b>Tambah Kolaborator</b><small id="cntCollab"></small></span><svg class="ico chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button></li>
         </ul>
       </section>
+      <section class="card c-wallets">
+        <h3>Akun Saya</h3>
+        <ul class="set-menu">
+          <li><button id="btnChangePin" type="button" class="set-link"><span class="set-link-text"><b>Ubah PIN / Password</b><small>Ganti PIN akun Anda</small></span><svg class="ico chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button></li>
+        </ul>
+      </section>
       <section id="setNote" class="card c-wallets hidden">
         <h3>Pengaturan</h3>
         <p class="muted small">Hanya Admin yang dapat mengubah pengaturan buku kas ini.</p>
@@ -456,6 +462,42 @@
       </form>
       <h4>Anggota buku kas ini</h4>
       <ul id="members" class="members"></ul>
+    </div>
+  </div>
+
+  <!-- ================= SHEET: RESET PIN ANGGOTA (oleh Admin) ================= -->
+  <div id="sheetResetPin" class="backdrop hidden">
+    <div class="sheet" role="dialog" aria-label="Reset PIN anggota">
+      <div class="grab"></div>
+      <div class="row between"><h3>Reset PIN Anggota</h3><button class="x" type="button" data-close>✕</button></div>
+      <form id="resetForm">
+        <p id="resetInfo" class="pay-info"></p>
+        <label class="field">Masukkan PIN Anda (Admin) untuk konfirmasi
+          <input id="resetAdminPin" type="password" autocomplete="current-password" placeholder="PIN Anda" required>
+        </label>
+        <p id="resetErr" class="error hidden"></p>
+        <button id="resetBtn" class="btn btn-primary" type="submit">Buat PIN Sementara</button>
+      </form>
+      <div id="resetResult" class="hidden">
+        <p class="muted small">PIN sementara untuk <b id="resetWho"></b>. PIN ini hanya tampil sekali. Berikan langsung kepada yang bersangkutan, lalu minta ia menggantinya lewat Pengaturan, Ubah PIN.</p>
+        <p id="resetPinShow" class="pin-show"></p>
+        <button id="resetCopy" class="btn btn-soft" type="button">Salin PIN</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= SHEET: UBAH PIN SAYA ================= -->
+  <div id="sheetChangePin" class="backdrop hidden">
+    <div class="sheet" role="dialog" aria-label="Ubah PIN">
+      <div class="grab"></div>
+      <div class="row between"><h3>Ubah PIN / Password</h3><button class="x" type="button" data-close>✕</button></div>
+      <form id="changePinForm">
+        <label class="field">PIN saat ini<input id="cpOld" type="password" autocomplete="current-password" required></label>
+        <label class="field">PIN baru<input id="cpNew" type="password" autocomplete="new-password" placeholder="Minimal 4 karakter" required></label>
+        <label class="field">Ulangi PIN baru<input id="cpNew2" type="password" autocomplete="new-password" required></label>
+        <p id="cpErr" class="error hidden"></p>
+        <button id="cpBtn" class="btn btn-primary" type="submit">Simpan PIN Baru</button>
+      </form>
     </div>
   </div>
 
