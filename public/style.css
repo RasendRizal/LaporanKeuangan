@@ -161,6 +161,9 @@ h4 { font-size: 13px; font-weight: 600; margin: 18px 0 8px; color: var(--muted);
 .icon-btn.del.confirm { background: var(--red); color: #fff; }
 .add-trx { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 12px; padding: 12px 18px; }
 .add-trx .ico { width: 18px; height: 18px; }
+.trx-search { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 10px 14px; border: 1px solid var(--line, #e5e7eb); border-radius: 12px; background: var(--card, #fff); }
+.trx-search .ico { width: 18px; height: 18px; flex: none; color: var(--muted); }
+.trx-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: inherit; color: inherit; }
 .empty-list { text-align: center; color: var(--muted); padding: 24px 0 8px; }
 
 /* ---------- Forms ---------- */

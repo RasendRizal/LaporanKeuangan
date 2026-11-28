@@ -11,7 +11,7 @@
   var IC_DEL ='<svg class="ico" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6"/><path d="M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
   var nf = new Intl.NumberFormat('id-ID');
   var editTrxId = null, editBillId = null, editDepId = null;
-  var state = { token: null, user: null, kasList: [], kasId: null, config: null, preset: 'month', dari: '', sampai: '', dompet: '', halaman: 1, dash: null, chart: null, mode: 'login' };
+  var state = { token: null, user: null, kasList: [], kasId: null, config: null, preset: 'month', dari: '', sampai: '', dompet: '', kategori: '', cari: '', halaman: 1, dash: null, chart: null, mode: 'login' };
   var busyCount = 0, toastTimer = null;
 
   /* ---------- Helper ---------- */
@@ -171,7 +171,7 @@
   /** Ambil data dashboard untuk periode & halaman yang sedang aktif. */
   function fetchDash() {
     if (state.preset !== 'custom') applyPreset(state.preset);
-    return call('apiGetDashboard', state.token, state.kasId, state.dari, state.sampai, state.halaman, state.dompet).then(function (d) {
+    return call('apiGetDashboard', state.token, state.kasId, state.dari, state.sampai, state.halaman, state.dompet, state.kategori, state.cari).then(function (d) {
       state.halaman = d.halaman;
       return d;
     });
@@ -207,6 +207,8 @@
     $('#pDari').value = state.dari; $('#pSampai').value = state.sampai;
     var pd = $('#periodDompet');
     if (pd) pd.value = state.dompet;
+    var pk = $('#periodKategori');
+    if (pk) pk.value = state.kategori;
     $$('.preset').forEach(function (b) { b.classList.toggle('active', b.dataset.preset === state.preset); });
     setErr('#periodErr', '');
     openSheet('#sheetPeriod');
@@ -216,6 +218,7 @@
     state.preset = p; state.halaman = 1;
     if (p === 'all') { state.dari = ''; state.sampai = ''; }
     state.dompet = $('#periodDompet').value;
+    state.kategori = $('#periodKategori').value;
     closeSheets();
     refresh();
   }
@@ -225,7 +228,7 @@
     var a = $('#pDari').value, b = $('#pSampai').value;
     if (!a && !b) { setPreset('all'); return; }
     if (a && b && a > b) { setErr('#periodErr', 'Tanggal "Dari" tidak boleh setelah "Sampai".'); return; }
-    state.preset = 'custom'; state.dari = a; state.sampai = b; state.dompet = $('#periodDompet').value; state.halaman = 1;
+    state.preset = 'custom'; state.dari = a; state.sampai = b; state.dompet = $('#periodDompet').value; state.kategori = $('#periodKategori').value; state.halaman = 1;
     closeSheets();
     refresh();
   }
@@ -787,6 +790,15 @@
       pd.options[0].value = '';
       pd.value = pcur;
       if (pd.value !== pcur) { state.dompet = ''; pd.value = ''; }
+    }
+    var pk = $('#periodKategori');
+    if (pk) {
+      var kcurF = state.kategori;
+      var semuaKat = activeNames(o.out, kcurF).concat(activeNames(o.inn, kcurF)).filter(function (n, i, arr) { return arr.indexOf(n) === i; });
+      fillSelect(pk, ['Semua kategori'].concat(semuaKat));
+      pk.options[0].value = '';
+      pk.value = kcurF;
+      if (pk.value !== kcurF) { state.kategori = ''; pk.value = ''; }
     }
     onJenisChange();
   }
@@ -1718,6 +1730,15 @@
     $('#periodBtn2').addEventListener('click', openPeriod);
     $('#periodForm').addEventListener('submit', onPeriodSubmit);
     $$('.preset').forEach(function (b) { b.addEventListener('click', function () { setPreset(b.dataset.preset); }); });
+    var cariTimer = null;
+    $('#trxSearch').addEventListener('input', function (e) {
+      clearTimeout(cariTimer);
+      var v = e.target.value.trim();
+      cariTimer = setTimeout(function () {
+        if (v === state.cari) return;
+        state.cari = v; state.halaman = 1; refresh();
+      }, 300);
+    });
     $('#pagePrev').addEventListener('click', function () { gotoPage(state.halaman - 1); });
     $('#pageNext').addEventListener('click', function () { gotoPage(state.halaman + 1); });
 
