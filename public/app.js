@@ -11,7 +11,7 @@
   var IC_DEL ='<svg class="ico" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6"/><path d="M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
   var nf = new Intl.NumberFormat('id-ID');
   var editTrxId = null, editBillId = null, editDepId = null;
-  var state = { token: null, user: null, kasList: [], kasId: null, config: null, preset: 'month', dari: '', sampai: '', halaman: 1, dash: null, chart: null, mode: 'login' };
+  var state = { token: null, user: null, kasList: [], kasId: null, config: null, preset: 'month', dari: '', sampai: '', dompet: '', halaman: 1, dash: null, chart: null, mode: 'login' };
   var busyCount = 0, toastTimer = null;
 
   /* ---------- Helper ---------- */
@@ -171,7 +171,7 @@
   /** Ambil data dashboard untuk periode & halaman yang sedang aktif. */
   function fetchDash() {
     if (state.preset !== 'custom') applyPreset(state.preset);
-    return call('apiGetDashboard', state.token, state.kasId, state.dari, state.sampai, state.halaman).then(function (d) {
+    return call('apiGetDashboard', state.token, state.kasId, state.dari, state.sampai, state.halaman, state.dompet).then(function (d) {
       state.halaman = d.halaman;
       return d;
     });
@@ -776,6 +776,13 @@
     var kb = $('#bKategori'), kcur = kb.value;
     fillSelect(kb, activeNames(o.out, kcur));
     if (kcur) kb.value = kcur;
+    var wf = $('#trxWalletFilter');
+    if (wf) {
+      var wcur = state.dompet;
+      wf.innerHTML = '<option value="">Semua dompet</option>' + activeNames(o.dompet, wcur).map(function (x) { return '<option value="' + esc(x) + '">' + esc(x) + '</option>'; }).join('');
+      wf.value = wcur;
+      if (wf.value !== wcur) { state.dompet = ''; wf.value = ''; }
+    }
     onJenisChange();
   }
 
@@ -1705,6 +1712,7 @@
     $('#periodBtn').addEventListener('click', openPeriod);
     $('#periodBtn2').addEventListener('click', openPeriod);
     $('#periodForm').addEventListener('submit', onPeriodSubmit);
+    $('#trxWalletFilter').addEventListener('change', function () { state.dompet = this.value; state.halaman = 1; refresh(); });
     $$('.preset').forEach(function (b) { b.addEventListener('click', function () { setPreset(b.dataset.preset); }); });
     $('#pagePrev').addEventListener('click', function () { gotoPage(state.halaman - 1); });
     $('#pageNext').addEventListener('click', function () { gotoPage(state.halaman + 1); });
