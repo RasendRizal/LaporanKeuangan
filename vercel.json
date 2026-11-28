@@ -1,7 +1,7 @@
 {
   "outputDirectory": "public",
   "functions": {
-    "api/*.js": { "maxDuration": 30 }
+    "api/*.js": { "maxDuration": 60 }
   },
   "crons": [
     { "path": "/api/cron-pengingat", "schedule": "0 0 * * *" }
