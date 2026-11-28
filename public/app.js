@@ -1075,6 +1075,49 @@
       .then(function () { $('#trxBtn').disabled = false; });
   }
 
+  /* ---------- Scan struk (hanya mengisi draf form, tidak langsung menyimpan) ---------- */
+  /** Kecilkan foto di browser (lebar maks 1280 px, JPEG) agar muat di batas body server. */
+  function compressImage(file) {
+    return new Promise(function (resolve, reject) {
+      var url = URL.createObjectURL(file), img = new Image();
+      img.onload = function () {
+        var w = img.naturalWidth, h = img.naturalHeight, s = Math.min(1, 1280 / Math.max(w, h));
+        var c = document.createElement('canvas');
+        c.width = Math.round(w * s); c.height = Math.round(h * s);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        resolve(c.toDataURL('image/jpeg', 0.8).split(',')[1]);
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('Foto tidak dapat dibaca. Coba format JPG atau PNG.')); };
+      img.src = url;
+    });
+  }
+
+  function onScanPick(e) {
+    var f = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!f) return;
+    if ($('#tJenis').value === 'Transfer') { toast('Scan struk tidak tersedia untuk Transfer.'); return; }
+    compressImage(f).then(function (b64) {
+      return call('apiScanStruk', state.token, state.kasId, b64, 'image/jpeg');
+    }).then(applyScan).catch(function (err) { toast(err.message); });
+  }
+
+  function applyScan(d) {
+    if (d.tanggal) $('#tTanggal').value = d.tanggal;
+    if (d.toko && !$('#tNama').value.trim()) $('#tNama').value = d.toko;
+    $('#rincList').innerHTML = '';
+    d.items.forEach(function (it) { addRincRow(it); });
+    show($('#rincPanel'), d.items.length > 0);
+    $('#rPajak').value = d.pajak.nominal ? nf.format(d.pajak.nominal) : '';
+    $('#rPajakMode').value = d.pajak.termasuk ? 'in' : 'add';
+    calcRinc();
+    var hitung = Number($('#tNominal').value.replace(/\D/g, '')) || 0;
+    if (!d.items.length) toast('Barang tidak terbaca. Isi manual atau coba foto ulang.');
+    else if (d.total && hitung !== d.total) toast('Draf dari struk. Total terbaca Rp ' + nf.format(d.total) + ', periksa ulang.');
+    else toast('Draf dari struk siap. Periksa lalu simpan.');
+  }
+
   /* ---------- Kolaborator ---------- */
   function openCollab() {
     $('#collabForm').reset(); setErr('#collabErr', '');
@@ -1741,6 +1784,8 @@
     });
     $('#pagePrev').addEventListener('click', function () { gotoPage(state.halaman - 1); });
     $('#pageNext').addEventListener('click', function () { gotoPage(state.halaman + 1); });
+    $('#scanBtn').addEventListener('click', function () { $('#scanFile').click(); });
+    $('#scanFile').addEventListener('change', onScanPick);
 
     $('#splitBack').addEventListener('click', function () { setTab('home'); });
     $('#spPersonForm').addEventListener('submit', spAddPerson);

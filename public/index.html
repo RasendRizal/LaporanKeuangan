@@ -395,6 +395,11 @@
       <div class="grab"></div>
       <div class="row between"><h3 id="trxTitle">Tambah Transaksi</h3><button class="x" type="button" data-close>✕</button></div>
       <form id="trxForm">
+        <div class="scan-row">
+          <button id="scanBtn" class="btn btn-soft" type="button"><svg class="ico" viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3"/></svg>Scan struk</button>
+          <input id="scanFile" type="file" accept="image/*" capture="environment" hidden>
+          <small class="muted">Hasil scan tampil sebagai draf, belum tersimpan.</small>
+        </div>
         <div class="grid2">
           <label class="field">Tanggal<input id="tTanggal" type="date" required></label>
           <label class="field">Jenis<select id="tJenis"></select></label>
