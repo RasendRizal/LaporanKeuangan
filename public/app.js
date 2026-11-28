@@ -205,6 +205,8 @@
 
   function openPeriod() {
     $('#pDari').value = state.dari; $('#pSampai').value = state.sampai;
+    var pd = $('#periodDompet');
+    if (pd) pd.value = state.dompet;
     $$('.preset').forEach(function (b) { b.classList.toggle('active', b.dataset.preset === state.preset); });
     setErr('#periodErr', '');
     openSheet('#sheetPeriod');
@@ -213,6 +215,7 @@
   function setPreset(p) {
     state.preset = p; state.halaman = 1;
     if (p === 'all') { state.dari = ''; state.sampai = ''; }
+    state.dompet = $('#periodDompet').value;
     closeSheets();
     refresh();
   }
@@ -222,7 +225,7 @@
     var a = $('#pDari').value, b = $('#pSampai').value;
     if (!a && !b) { setPreset('all'); return; }
     if (a && b && a > b) { setErr('#periodErr', 'Tanggal "Dari" tidak boleh setelah "Sampai".'); return; }
-    state.preset = 'custom'; state.dari = a; state.sampai = b; state.halaman = 1;
+    state.preset = 'custom'; state.dari = a; state.sampai = b; state.dompet = $('#periodDompet').value; state.halaman = 1;
     closeSheets();
     refresh();
   }
@@ -777,11 +780,13 @@
     fillSelect(kb, activeNames(o.out, kcur));
     if (kcur) kb.value = kcur;
     var wf = $('#trxWalletFilter');
-    if (wf) {
-      var wcur = state.dompet;
-      wf.innerHTML = '<option value="">Semua dompet</option>' + activeNames(o.dompet, wcur).map(function (x) { return '<option value="' + esc(x) + '">' + esc(x) + '</option>'; }).join('');
-      wf.value = wcur;
-      if (wf.value !== wcur) { state.dompet = ''; wf.value = ''; }
+    var pd = $('#periodDompet');
+    if (pd) {
+      var pcur = state.dompet;
+      fillSelect(pd, ['Semua dompet'].concat(activeNames(o.dompet, pcur)));
+      pd.options[0].value = '';
+      pd.value = pcur;
+      if (pd.value !== pcur) { state.dompet = ''; pd.value = ''; }
     }
     onJenisChange();
   }
@@ -1712,7 +1717,6 @@
     $('#periodBtn').addEventListener('click', openPeriod);
     $('#periodBtn2').addEventListener('click', openPeriod);
     $('#periodForm').addEventListener('submit', onPeriodSubmit);
-    $('#trxWalletFilter').addEventListener('change', function () { state.dompet = this.value; state.halaman = 1; refresh(); });
     $$('.preset').forEach(function (b) { b.addEventListener('click', function () { setPreset(b.dataset.preset); }); });
     $('#pagePrev').addEventListener('click', function () { gotoPage(state.halaman - 1); });
     $('#pageNext').addEventListener('click', function () { gotoPage(state.halaman + 1); });

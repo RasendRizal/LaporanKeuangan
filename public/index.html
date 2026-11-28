@@ -231,7 +231,7 @@
 
     <!-- Kartu 5: Transaksi bulan ini -->
     <section class="card c-recent">
-      <div class="row between"><h3>Transaksi</h3><button id="periodBtn2" class="period" type="button" aria-label="Pilih periode"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span class="period-label">Bulan ini</span><svg class="ico chev" viewBox="0 0 24 24"><path d="M6 9l6 6-6 6"/></svg></button><select id="trxWalletFilter" class="filter-select" aria-label="Filter berdasarkan dompet"><option value="">Semua dompet</option></select></div>
+      <div class="row between"><h3>Transaksi</h3><button id="periodBtn2" class="period" type="button" aria-label="Pilih periode"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span class="period-label">Bulan ini</span><svg class="ico chev" viewBox="0 0 24 24"><path d="M6 9l6 6-6 6"/></svg></button></div>
       <button id="btnAddTrx2" class="btn btn-primary add-trx" type="button"><svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Tambah Transaksi</button>
       <ul id="recent" class="trx-list"></ul>
       <div id="pager" class="pager hidden">
@@ -532,6 +532,9 @@
           <label class="field">Dari tanggal<input id="pDari" type="date"></label>
           <label class="field">Sampai tanggal<input id="pSampai" type="date"></label>
         </div>
+        <label class="field">Dompet
+          <select id="periodDompet"><option value="">Semua dompet</option></select>
+        </label>
         <p id="periodErr" class="error hidden"></p>
         <button class="btn btn-primary" type="submit">Terapkan</button>
       </form>
